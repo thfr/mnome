@@ -1,6 +1,6 @@
 # Mnome
 
-Mnome is a metronom application written C++.
+Mnome is a metronom application written in C++.
 Right now it is more or less a training place and play ground for me in order to get familiar with certain features of the programming language and the ecosystem around it.
 
 # Usage
