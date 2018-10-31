@@ -1,9 +1,4 @@
 /// Mnome - A metronome program
-///
-/// Main file
-///
-/// \file main.cpp
-
 
 #include "BeatPlayer.hpp"
 #include "Repl.hpp"

@@ -1,3 +1,7 @@
+/// Repl: Read evaluate print loop
+///
+/// Recognizes given commands and executes the according functionality
+
 #include "Repl.hpp"
 
 namespace mnome {
