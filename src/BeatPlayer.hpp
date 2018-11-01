@@ -30,7 +30,7 @@ public:
    /// Constructor
    /// \param  beatRate  rate of the beat in [bpm]
    /// \param  beat      raw data of one beat
-   BeatPlayer(const size_t beatRate);
+   explicit BeatPlayer(size_t beatRate);
 
    ~BeatPlayer();
 
@@ -71,6 +71,6 @@ public:
 /// \param[out]  data     samples to be generated
 /// \param[in]   freq     tone frequency
 /// \param[in]   lengthS  length in seconds
-void generateInt16Sine(vector<int16_t>& data, const size_t freq, const double lengthS);
+void generateInt16Sine(vector<int16_t>& data, size_t freq, double lengthS);
 
 }  // namespace mnome

@@ -17,7 +17,7 @@ class Mnome
 
 public:
    /// Ctor
-   Mnome() : bp{80}, repl{}
+   Mnome() : bp{80} 
    {
       // generate the beat
       vector<TBeatDataType> beatData;
@@ -33,7 +33,7 @@ public:
          this->bp.waitForStop();
       });
       commands.emplace("bpm", [this](string& s) {
-         size_t bpm      = s.size() > 0 ? stoul(s) : 80;
+         size_t bpm      = !s.empty() ? stoul(s) : 80;
          bool wasRunning = bp.isRunning();
          if (wasRunning) {
             this->bp.stop();

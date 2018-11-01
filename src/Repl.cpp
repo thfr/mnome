@@ -4,13 +4,15 @@
 
 #include "Repl.hpp"
 
+#include <memory>
+
 namespace mnome {
 
 /// Trim first spaces of a string
 /// \note see https://stackoverflow.com/a/217605
 static inline std::string& ltrim(std::string& s)
 {
-   s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](int c) { return !std::isspace(c); }));
+   s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](int c) { return std::isspace(c) == 0; }));
    return s;
 }
 
@@ -18,7 +20,7 @@ static inline std::string& ltrim(std::string& s)
 /// \note see https://stackoverflow.com/a/217605
 static inline void rtrim(std::string& s)
 {
-   s.erase(std::find_if(s.rbegin(), s.rend(), [](int ch) { return !std::isspace(ch); }).base(),
+   s.erase(std::find_if(s.rbegin(), s.rend(), [](int ch) { return std::isspace(ch) == 0; }).base(),
            s.end());
 }
 
@@ -28,7 +30,7 @@ class ForbiddenCommandExecption : exception
 };
 
 
-Repl::Repl() : commands{}, myThread{nullptr}, requestStop{false} {}
+Repl::Repl() :  myThread{nullptr}, requestStop{false} {}
 Repl::Repl(commandlist_t& cmds) : commands{cmds}, myThread{nullptr}, requestStop{false} {}
 
 Repl::~Repl()
@@ -42,7 +44,7 @@ void Repl::setCommands(const commandlist_t& cmds) { commands = cmds; }
 void Repl::start()
 {
    waitForStop();
-   myThread.reset(new thread([this]() { this->run(); }));
+   myThread = std::make_unique<thread>([this]() { this->run(); });
 }
 
 void Repl::stop()
@@ -72,10 +74,10 @@ void Repl::run()
       getline(cin, input);
       rtrim(ltrim(input));
 
-      if (input.size() == 0) {
+      if (input.empty()) {
          continue;
       }
-      size_t cmdSep = input.find(" ", 0);
+      size_t cmdSep = input.find(' ', 0);
 
       // find command in command list
       string commandString = input.substr(0, cmdSep);
@@ -87,7 +89,7 @@ void Repl::run()
 
       try {
          // execute command with parameters
-         string args = (cmdSep != input.npos) ? input.substr(cmdSep + 1) : "";
+         string args = (cmdSep != std::string::npos) ? input.substr(cmdSep + 1) : "";
          possibleCommand->second(args);
       }
       catch (const std::exception& e) {  // reference to the base of a polymorphic object

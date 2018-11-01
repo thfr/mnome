@@ -2,12 +2,12 @@
 ///
 /// Recognizes given commands and executes the according functionality
 
-#include <string>
+#include <atomic>
+#include <functional>
 #include <iostream>
 #include <memory>
-#include <atomic>
+#include <string>
 #include <thread>
-#include <functional>
 #include <unordered_map>
 
 
@@ -30,7 +30,7 @@ public:
    Repl();
 
    /// Ctor with command list
-   Repl(commandlist_t& cmds);
+   explicit Repl(commandlist_t& cmds);
 
    ~Repl();
 
