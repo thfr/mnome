@@ -32,6 +32,7 @@ public:
          this->bp.stop();
          this->bp.waitForStop();
       });
+
       commands.emplace("bpm", [this](string& s) {
          size_t bpm      = !s.empty() ? stoul(s) : 80;
          bool wasRunning = bp.isRunning();
@@ -47,6 +48,13 @@ public:
 
 
       repl.setCommands(commands);
+
+      repl.addCommand("test", [](string a, string b) {
+        std::cout << "a " << a;
+        std::cout << "b " << b;
+
+      });
+
       repl.start();
    }
 
