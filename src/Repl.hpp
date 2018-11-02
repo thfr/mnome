@@ -2,12 +2,15 @@
 ///
 /// Recognizes given commands and executes the according functionality
 
-#include <string>
+#ifndef MNOME_REPL_H
+#define MNOME_REPL_H
+
+#include <atomic>
+#include <functional>
 #include <iostream>
 #include <memory>
-#include <atomic>
+#include <string>
 #include <thread>
-#include <functional>
 #include <unordered_map>
 
 
@@ -59,3 +62,6 @@ private:
 
 
 }  // namespace mnome
+
+
+#endif  //  MNOME_REPL_H

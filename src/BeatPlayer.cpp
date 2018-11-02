@@ -84,7 +84,7 @@ size_t getNumbersOfSamples(double time) { return static_cast<size_t>(round(time 
 
 void generateInt16Sine(vector<int16_t>& data, const size_t freq, const double lengthS)
 {
-   size_t samples = static_cast<size_t>(floor(PLAYBACK_RATE * lengthS));
+   auto samples = static_cast<size_t>(floor(PLAYBACK_RATE * lengthS));
 
    data.clear();
    data.reserve(samples);
@@ -97,7 +97,7 @@ void generateInt16Sine(vector<int16_t>& data, const size_t freq, const double le
 
 
 BeatPlayer::BeatPlayer(const size_t beatRate)
-   : beatRate(beatRate), beat{}, playBackBuffer{}, myThread{nullptr}, requestStop{false}
+   : beatRate(beatRate), myThread{nullptr}, requestStop{false}
 {
 }
 
@@ -130,13 +130,15 @@ void BeatPlayer::start()
       beatIntervalSamples = static_cast<size_t>(floor(1.0 / (beatRate / 60.0) * PLAYBACK_RATE));
       localBeat           = beat;
    }
-   assert(localBeat.size() > 0);
+   if (localBeat.empty()) {
+      cout << "Warning: the beat is silence, you will not hear anything." << endl;
+   }
    double lengthS = getDuration(localBeat.size());
 
    // Fade the beat in and out to avoid click/pop noises because of too sudden output value
    // changes: First 2 ms is fading in, last 2 ms is fading out If the beat length is less then 8
    // ms use 25% each for fading in and out
-   size_t rampingSteps = static_cast<size_t>(
+   auto rampingSteps = static_cast<size_t>(
       (lengthS < FADE_MIN_TIME)
          ? floor(static_cast<double>(PLAYBACK_RATE) * lengthS * FADE_MIN_PERCENTAGE)
          : floor(static_cast<double>(PLAYBACK_RATE) * FADE_MIN_TIME * FADE_MIN_PERCENTAGE));
@@ -154,7 +156,7 @@ void BeatPlayer::start()
 
    // check for length: the playback buffer should be at least 1000 ms
    if (localBeat.size() < getNumbersOfSamples(PLAYBACK_MIN_ALSA_WRITE)) {
-      size_t numberOfCopies =
+      auto numberOfCopies =
          static_cast<size_t>(ceil(getNumbersOfSamples(PLAYBACK_MIN_ALSA_WRITE) / localBeat.size()));
 
       playBackBuffer.reserve(numberOfCopies * localBeat.size());
@@ -170,7 +172,7 @@ void BeatPlayer::start()
 
    // start the thread
    waitForStop();
-   myThread.reset(new thread([this, playBackBuffer]() {
+   myThread = make_unique<thread>([this, playBackBuffer]() {
       requestStop = false;
 
       int err;
@@ -200,10 +202,10 @@ void BeatPlayer::start()
                cout << "snd_pcm_writei failed:" << snd_strerror(static_cast<int>(frames)) << "\n";
                break;
             }
-            if (frames > 0 &&
-                frames < static_cast<snd_pcm_sframes_t>(sizeof(playBackBuffer.data())))
-               cout << "Short write (expected " << sizeof(playBackBuffer.data()) << " wrote "
-                    << frames << ")\n";
+            if ((frames > 0) && (frames < static_cast<snd_pcm_sframes_t>(playBackBuffer.size()))) {
+               cout << "Short write (expected " << playBackBuffer.size() << " wrote " << frames
+                    << ")\n";
+            }
          }
       }
       else {
@@ -212,7 +214,7 @@ void BeatPlayer::start()
 
       snd_pcm_close(handle);
       requestStop = false;
-   }));
+   });
 }
 
 void BeatPlayer::stop()

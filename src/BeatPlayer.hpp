@@ -2,6 +2,9 @@
 ///
 /// Plays a beat
 
+#ifndef MNOME_BEATPLAYER_H
+#define MNOME_BEATPLAYER_H
+
 #include <atomic>
 #include <mutex>
 #include <thread>
@@ -30,7 +33,7 @@ public:
    /// Constructor
    /// \param  beatRate  rate of the beat in [bpm]
    /// \param  beat      raw data of one beat
-   BeatPlayer(const size_t beatRate);
+   BeatPlayer(size_t beatRate);
 
    ~BeatPlayer();
 
@@ -74,3 +77,6 @@ public:
 void generateInt16Sine(vector<int16_t>& data, const size_t freq, const double lengthS);
 
 }  // namespace mnome
+
+
+#endif  //  MNOME_BEATPLAYER_H
