@@ -5,6 +5,8 @@ Right now it is more or less a training place and play ground for me in order to
 
 # Usage
 
+Following commands are implemented: `start`, `stop`, `bpm <number>` and `pattern <list of "*" and "+">`
+
 ```
 [mnome]: start
 Playing at 80 bpm
@@ -17,6 +19,9 @@ Playing at 80 bpm
 Playing at 120 bpm
 
 [mnome]: bpm 160
+Playing at 160 bpm
+
+[mnome]: pattern *+++*++
 Playing at 160 bpm
 
 [mnome]: stop

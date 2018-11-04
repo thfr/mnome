@@ -6,6 +6,7 @@
 
 #include <alsa/asoundlib.h>
 
+#include <algorithm>
 #include <atomic>
 #include <cassert>
 #include <chrono>
@@ -107,114 +108,137 @@ BeatPlayer::~BeatPlayer()
    waitForStop();
 }
 
-void BeatPlayer::setBeat(const vector<TBeatDataType>& newBeat)
-{
-   beat.clear();
-   beat = newBeat;
-}
-
 void BeatPlayer::start()
 {
-   size_t beatIntervalSamples;
-   vector<TBeatDataType> playBackBuffer;
-   vector<TBeatDataType> localBeat;
-
-   // lock mutex to have stable settings
-   {
-      lock_guard<mutex> guard(setterMutex);
-
-      cout << "Playing at " << beatRate << " bpm" << endl;
-
-      // create the playback buffer so that it contains one beat and
-      // the correct amount of silence before the next beat starts
-      beatIntervalSamples = static_cast<size_t>(floor(1.0 / (beatRate / 60.0) * PLAYBACK_RATE));
-      localBeat           = beat;
+   if (isRunning()) {
+      cout << "Error: BeatPlayer is already running, but was started again" << endl;
+      return;
    }
+
+   lock_guard<mutex> guard(setterMutex);
+
+   playBackBuffer.clear();
+
+   auto beatIntervalSamples  = static_cast<size_t>(floor(1.0 / (beatRate / 60.0) * PLAYBACK_RATE));
+   auto localBeat            = beat;
+   auto localAccentuatedBeat = accentuatedBeat;
+
+   bool hasAccent =
+      end(accentuatedPattern) != find(begin(accentuatedPattern), end(accentuatedPattern), true);
+
    if (localBeat.empty()) {
       cout << "Warning: the beat is silence, you will not hear anything." << endl;
    }
-   double lengthS = getDuration(localBeat.size());
+   if (localAccentuatedBeat.empty() && hasAccent) {
+      localAccentuatedBeat = localBeat;
+   }
+
+   double lengthS = getDuration(beat.size());
 
    // Fade the beat in and out to avoid click/pop noises because of too sudden output value
    // changes: First 2 ms is fading in, last 2 ms is fading out If the beat length is less then 8
    // ms use 25% each for fading in and out
-   auto rampingSteps = static_cast<size_t>(
-      (lengthS < FADE_MIN_TIME)
-         ? floor(static_cast<double>(PLAYBACK_RATE) * lengthS * FADE_MIN_PERCENTAGE)
-         : floor(static_cast<double>(PLAYBACK_RATE) * FADE_MIN_TIME * FADE_MIN_PERCENTAGE));
+   auto calcRampingSteps = [](double l) -> size_t {
+      return floor(PLAYBACK_RATE * l * FADE_MIN_PERCENTAGE);
+   };
+   auto rampingSteps =
+      (lengthS < FADE_MIN_TIME) ? calcRampingSteps(lengthS) : calcRampingSteps(FADE_MIN_TIME);
 
    // Since fadeInOut only uses the first x and last y samples,
    // make sure not to fade out zero values
-   if (localBeat.size() > beatIntervalSamples) {
-      localBeat.resize(beatIntervalSamples, 0);
-      fadeInOut(localBeat, rampingSteps, rampingSteps);
-   }
-   else {
-      fadeInOut(localBeat, rampingSteps, rampingSteps);
-      localBeat.resize(beatIntervalSamples, 0);
-   }
+   auto adjustBuffer = [=](vector<TBeatDataType>& buffer) {
+      if (buffer.size() > beatIntervalSamples) {
+         buffer.resize(beatIntervalSamples, 0);
+         fadeInOut(buffer, rampingSteps, rampingSteps);
+      }
+      else {
+         fadeInOut(buffer, rampingSteps, rampingSteps);
+         buffer.resize(beatIntervalSamples, 0);
+      }
+   };
 
-   // check for length: the playback buffer should be at least 1000 ms
-   if (localBeat.size() < getNumbersOfSamples(PLAYBACK_MIN_ALSA_WRITE)) {
-      auto numberOfCopies =
-         static_cast<size_t>(ceil(getNumbersOfSamples(PLAYBACK_MIN_ALSA_WRITE) / localBeat.size()));
+   adjustBuffer(localBeat);
+   if (hasAccent) {
+      adjustBuffer(localAccentuatedBeat);
 
-      playBackBuffer.reserve(numberOfCopies * localBeat.size());
+      // fill the playback buffer according to the pattern
       auto playBackBufferIterator = back_inserter(playBackBuffer);
-      for (size_t copyIdx = 0; copyIdx < numberOfCopies; ++copyIdx) {
-         playBackBufferIterator = copy(localBeat.begin(), localBeat.end(), playBackBufferIterator);
+      for (bool accent : accentuatedPattern) {
+         if (accent) {
+            playBackBufferIterator =
+               copy(begin(localAccentuatedBeat), end(localAccentuatedBeat), playBackBufferIterator);
+         }
+         else {
+            playBackBufferIterator = copy(begin(localBeat), end(localBeat), playBackBufferIterator);
+         }
       }
    }
    else {
-      playBackBuffer.reserve(localBeat.size());
-      copy(localBeat.begin(), localBeat.end(), back_inserter(playBackBuffer));
+      playBackBuffer = localBeat;
+   }
+
+   // increase the playbackbuffer if too small
+   if (playBackBuffer.size() < getNumbersOfSamples(PLAYBACK_MIN_ALSA_WRITE)) {
+      auto numberOfCopies = static_cast<size_t>(
+         ceil(getNumbersOfSamples(PLAYBACK_MIN_ALSA_WRITE) / playBackBuffer.size()));
+
+      playBackBuffer.reserve(numberOfCopies * playBackBuffer.size());
+      auto playBackBufferIterator = back_inserter(playBackBuffer);
+      auto copyLength             = playBackBuffer.size();
+      for (size_t copyIdx = 0; copyIdx < numberOfCopies; ++copyIdx) {
+         playBackBufferIterator = copy_n(begin(playBackBuffer), copyLength, playBackBufferIterator);
+      }
    }
 
    // start the thread
+   cout << "Playing at " << beatRate << " bpm" << endl;
    waitForStop();
-   myThread = make_unique<thread>([this, playBackBuffer]() {
-      requestStop = false;
+   myThread = make_unique<thread>([this]() { this->run(); });
+}
 
-      int err;
-      snd_pcm_t* handle;
-      snd_pcm_sframes_t frames;
-      bool initSuccess = true;
+void BeatPlayer::run()
+{
+   requestStop = false;
 
-      err = snd_pcm_open(&handle, PLAYBACK_ALSA_DEVICE, SND_PCM_STREAM_PLAYBACK, 0);
+   int err;
+   snd_pcm_t* handle;
+   snd_pcm_sframes_t frames;
+   bool initSuccess = true;
+
+   err = snd_pcm_open(&handle, PLAYBACK_ALSA_DEVICE, SND_PCM_STREAM_PLAYBACK, 0);
+   if (err < 0) {
+      initSuccess = false;
+   }
+   else {
+      err = snd_pcm_set_params(handle, SND_PCM_FORMAT_S16, SND_PCM_ACCESS_RW_INTERLEAVED, 1,
+                               PLAYBACK_RATE, 1, 500'000);
       if (err < 0) {
          initSuccess = false;
       }
-      else {
-         err = snd_pcm_set_params(handle, SND_PCM_FORMAT_S16, SND_PCM_ACCESS_RW_INTERLEAVED, 1,
-                                  PLAYBACK_RATE, 1, 500'000);
-         if (err < 0) {
-            initSuccess = false;
+   }
+
+   if (initSuccess) {
+      while (!requestStop) {
+         frames = snd_pcm_writei(handle, playBackBuffer.data(), playBackBuffer.size());
+         if (frames < 0) {
+            frames = snd_pcm_recover(handle, static_cast<int>(frames), 0);
+         }
+         if (frames < 0) {
+            cout << "snd_pcm_writei failed:" << snd_strerror(static_cast<int>(frames)) << "\n";
+            break;
+         }
+         if ((frames > 0) && (frames < static_cast<snd_pcm_sframes_t>(playBackBuffer.size()))) {
+            cout << "Short write (expected " << playBackBuffer.size() << " wrote " << frames
+                 << ")\n";
          }
       }
+   }
+   else {
+      cout << "Playback open error: " << snd_strerror(err) << endl;
+   }
 
-      if (initSuccess) {
-         while (!requestStop) {
-            frames = snd_pcm_writei(handle, playBackBuffer.data(), playBackBuffer.size());
-            if (frames < 0) {
-               frames = snd_pcm_recover(handle, static_cast<int>(frames), 0);
-            }
-            if (frames < 0) {
-               cout << "snd_pcm_writei failed:" << snd_strerror(static_cast<int>(frames)) << "\n";
-               break;
-            }
-            if ((frames > 0) && (frames < static_cast<snd_pcm_sframes_t>(playBackBuffer.size()))) {
-               cout << "Short write (expected " << playBackBuffer.size() << " wrote " << frames
-                    << ")\n";
-            }
-         }
-      }
-      else {
-         cout << "Playback open error: " << snd_strerror(err) << endl;
-      }
-
-      snd_pcm_close(handle);
-      requestStop = false;
-   });
+   snd_pcm_close(handle);
+   requestStop = false;
 }
 
 void BeatPlayer::stop()
@@ -232,10 +256,16 @@ void BeatPlayer::setBPM(size_t bpm)
 
 size_t BeatPlayer::getBPM() const { return beatRate; }
 
-void BeatPlayer::setData(const vector<TBeatDataType>& beatData)
+void BeatPlayer::setAccentuatedBeat(const vector<TBeatDataType>& newBeat)
 {
    lock_guard<mutex> guard(setterMutex);
-   beat = beatData;
+   accentuatedBeat = newBeat;
+}
+
+void BeatPlayer::setBeat(const vector<TBeatDataType>& newBeat)
+{
+   lock_guard<mutex> guard(setterMutex);
+   beat = newBeat;
 }
 
 void BeatPlayer::setDataAndBPM(const vector<TBeatDataType>& beatData, size_t bpm)
@@ -243,6 +273,12 @@ void BeatPlayer::setDataAndBPM(const vector<TBeatDataType>& beatData, size_t bpm
    lock_guard<mutex> guard(setterMutex);
    beat     = beatData;
    beatRate = bpm;
+}
+
+void BeatPlayer::setAccentuatedPattern(const vector<bool>& pattern)
+{
+   lock_guard<mutex> guard(setterMutex);
+   accentuatedPattern = pattern;
 }
 
 bool BeatPlayer::isRunning() const { return myThread && myThread->joinable(); }

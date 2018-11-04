@@ -22,7 +22,12 @@ public:
       // generate the beat
       vector<TBeatDataType> beatData;
       generateInt16Sine(beatData, 500, 0.040);
+      vector<TBeatDataType> accentuatedBeat;
+      generateInt16Sine(accentuatedBeat, 750, 0.040);
+
       bp.setBeat(beatData);
+      bp.setAccentuatedBeat(accentuatedBeat);
+      bp.setAccentuatedPattern(vector<bool>{true, false, false, false});
 
       // set commands for the repl
       commandlist_t commands;
@@ -42,6 +47,28 @@ public:
          this->bp.setBPM(bpm);
          if (wasRunning) {
             this->bp.start();
+         }
+      });
+      commands.emplace("pattern", [this](string& s) {
+         if ((s.find('*') != string::npos) || (s.find('+') != string::npos)) {
+            vector<bool> pattern;
+            for (char c : s) {
+               if (c == '*') {
+                  pattern.push_back(true);
+               }
+               else if (c == '+') {
+                  pattern.push_back(false);
+               }
+            }
+            bool wasRunning = bp.isRunning();
+            if (wasRunning) {
+               this->bp.stop();
+               this->bp.waitForStop();
+            }
+            this->bp.setAccentuatedPattern(pattern);
+            if (wasRunning) {
+               this->bp.start();
+            }
          }
       });
 
