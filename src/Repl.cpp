@@ -87,7 +87,7 @@ void Repl::run()
 
       try {
          // execute command with parameters
-         string args = (cmdSep != string::npos) ? input.substr(0, cmdSep + 1) : string{};
+         string args = (cmdSep != string::npos) ? input.substr(cmdSep + 1, string::npos) : string{};
          possibleCommand->second(args);
       }
       catch (const std::exception& e) {  // reference to the base of a polymorphic object
