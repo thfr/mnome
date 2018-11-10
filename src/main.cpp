@@ -3,6 +3,11 @@
 #include "BeatPlayer.hpp"
 #include "Repl.hpp"
 
+#include <memory>
+#include <mutex>
+
+#include <csignal>
+
 
 using namespace std;
 
@@ -21,9 +26,9 @@ public:
    {
       // generate the beat
       vector<TBeatDataType> beatData;
-      generateInt16Sine(beatData, 500, 0.040);
+      generateInt16Sine(beatData, 500, 0.050);
       vector<TBeatDataType> accentuatedBeat;
-      generateInt16Sine(accentuatedBeat, 750, 0.040);
+      generateInt16Sine(accentuatedBeat, 750, 0.050);
 
       bp.setBeat(beatData);
       bp.setAccentuatedBeat(accentuatedBeat);
@@ -77,17 +82,47 @@ public:
       repl.start();
    }
 
+   void stop()
+   {
+      bp.stop();
+      repl.stop();
+   }
+
    /// Wait for the read evaluate loop to finish
-   void waitForStop() const { repl.waitForStop(); }
+   void waitForStop() const
+   {
+      repl.waitForStop();
+   }
 };
 
 }  // namespace mnome
 
 
+mutex AppMutex;
+unique_ptr<mnome::Mnome> App;
+
+
+void shutDownAppHandler(int)
+{
+   lock_guard<mutex> lg{AppMutex};
+   if (App) {
+      App->stop();
+   }
+}
+
 int main()
 {
-   mnome::Mnome mnome{};
-   mnome.waitForStop();
+   signal(SIGINT, shutDownAppHandler);
+   signal(SIGTERM, shutDownAppHandler);
+   signal(SIGABRT, shutDownAppHandler);
+
+   {
+      lock_guard<mutex> lg{AppMutex};
+      App = make_unique<mnome::Mnome>();
+   }
+
+   // no mutex needed, member function is const
+   App->waitForStop();
 
    return 0;
 }

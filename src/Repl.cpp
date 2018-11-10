@@ -70,6 +70,12 @@ void Repl::run()
       cout << "[mnome]: ";
 
       getline(cin, input);
+
+      // catch ctrl+d
+      if (cin.eof()) {
+         break;
+      }
+
       rtrim(ltrim(input));
 
       if (input.empty()) {
