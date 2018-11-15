@@ -43,38 +43,23 @@ public:
          this->bp.waitForStop();
       });
       commands.emplace("bpm", [this](string& s) {
-         size_t bpm      = !s.empty() ? stoul(s, nullptr, 10) : 80;
-         bool wasRunning = bp.isRunning();
-         if (wasRunning) {
-            this->bp.stop();
-            this->bp.waitForStop();
-         }
+         size_t bpm = !s.empty() ? stoul(s, nullptr, 10) : 80;
          this->bp.setBPM(bpm);
-         if (wasRunning) {
-            this->bp.start();
-         }
       });
       commands.emplace("pattern", [this](string& s) {
-         if ((s.find('*') != string::npos) || (s.find('+') != string::npos)) {
-            vector<bool> pattern;
-            for (char c : s) {
-               if (c == '*') {
-                  pattern.push_back(true);
-               }
-               else if (c == '+') {
-                  pattern.push_back(false);
-               }
+         if ((s.find('*') == string::npos) && (s.find('+') == string::npos)) {
+            return;
+         }
+         vector<bool> pattern;
+         for (char c : s) {
+            if (c == '*') {
+               pattern.push_back(true);
             }
-            bool wasRunning = bp.isRunning();
-            if (wasRunning) {
-               this->bp.stop();
-               this->bp.waitForStop();
-            }
-            this->bp.setAccentuatedPattern(pattern);
-            if (wasRunning) {
-               this->bp.start();
+            else if (c == '+') {
+               pattern.push_back(false);
             }
          }
+         this->bp.setAccentuatedPattern(pattern);
       });
 
 
@@ -89,10 +74,7 @@ public:
    }
 
    /// Wait for the read evaluate loop to finish
-   void waitForStop() const
-   {
-      repl.waitForStop();
-   }
+   void waitForStop() const { repl.waitForStop(); }
 };
 
 }  // namespace mnome
