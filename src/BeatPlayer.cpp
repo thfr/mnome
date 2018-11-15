@@ -97,8 +97,8 @@ void generateInt16Sine(vector<int16_t>& data, const size_t freq, const double le
 }
 
 
-BeatPlayer::BeatPlayer(const size_t beatRate)
-   : beatRate(beatRate), myThread{nullptr}, requestStop{false}
+BeatPlayer::BeatPlayer(const size_t brate)
+   : beatRate(brate), myThread{nullptr}, requestStop{false}
 {
 }
 
