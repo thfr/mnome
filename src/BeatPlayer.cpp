@@ -266,12 +266,14 @@ void BeatPlayer::run()
          cout << "snd_pcm_writei failed:" << snd_strerror(static_cast<int>(frames)) << "\n";
          break;
       }
-      if ((frames > 0) && (frames < static_cast<snd_pcm_sframes_t>(samplesToWrite))) {
-         cout << "Short write (expected " << samplesToWrite << " wrote " << frames << ")\n";
-      }
 
-      // refresh written samples
-      samplesOffset = (samplesOffset + samplesToWrite) % playBackBuffer.size();
+      // check short write
+      // set a new sample offset based on number of samples written
+      if ((frames > 0) && (frames != static_cast<snd_pcm_sframes_t>(samplesToWrite))) {
+         cout << "Short write (expected " << samplesToWrite << " but wrote " << frames
+              << " instead)\n";
+      }
+      samplesOffset = (samplesOffset + frames) % playBackBuffer.size();
    }
 
    cleanup();
