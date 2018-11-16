@@ -177,22 +177,11 @@ void BeatPlayer::start()
       playBackBuffer = localBeat;
    }
 
-   // increase the playbackbuffer if too small
-   if (playBackBuffer.size() < getNumbersOfSamples(PLAYBACK_MIN_ALSA_WRITE)) {
-      auto numberOfCopies = static_cast<size_t>(
-         ceil(getNumbersOfSamples(PLAYBACK_MIN_ALSA_WRITE) / playBackBuffer.size()));
-
-      playBackBuffer.reserve(numberOfCopies * playBackBuffer.size());
-      auto playBackBufferIterator = back_inserter(playBackBuffer);
-      auto copyLength             = playBackBuffer.size();
-      for (size_t copyIdx = 0; copyIdx < numberOfCopies; ++copyIdx) {
-         playBackBufferIterator = copy_n(begin(playBackBuffer), copyLength, playBackBufferIterator);
-      }
-   }
-
-   // start the thread
    cout << "Playing at " << beatRate << " bpm" << endl;
+
+   // make sure join was called before potentially destroying a previous thread object
    waitForStop();
+   // start the thread
    myThread = make_unique<thread>([this]() { this->run(); });
 }
 
@@ -207,12 +196,13 @@ void BeatPlayer::run()
    snd_pcm_sframes_t frames;
    unique_ptr<struct pollfd> pfd = make_unique<struct pollfd>();
 
+   // house keeping before exiting
    auto cleanup = [&]() {
       snd_pcm_close(handle);
       requestStop = false;
    };
 
-   // open alsa device
+   // open ALSA device
    err = snd_pcm_open(&handle, PLAYBACK_ALSA_DEVICE, SND_PCM_STREAM_PLAYBACK, SND_PCM_ASYNC);
    if (err < 0) {
       cout << "Could not open device " << PLAYBACK_ALSA_DEVICE << endl;
@@ -229,7 +219,7 @@ void BeatPlayer::run()
       return;
    }
 
-   // get file descriptor for poll to wait for
+   // get count and file descriptors for poll to wait for
    pfdcount = snd_pcm_poll_descriptors_count(handle);
    if (pfdcount < 0) {
       cout << "Error getting pcm poll descriptors count for " << PLAYBACK_ALSA_DEVICE << endl;
@@ -244,7 +234,7 @@ void BeatPlayer::run()
    }
 
    size_t samplesOffset  = 0;
-   size_t samplesToWrite = min(PLAYBACK_RATE / 10, playBackBuffer.size());
+   size_t samplesToWrite = min(getNumbersOfSamples(PLAYBACK_MIN_ALSA_WRITE), playBackBuffer.size());
    while (!requestStop) {
       // wait until next write
       uint16_t revents;
@@ -256,7 +246,7 @@ void BeatPlayer::run()
          return;
       }
 
-      // write to sound buffer
+      // delivery samples to sound buffer
       size_t samplesTillEnd = playBackBuffer.size() - samplesOffset;
       if (samplesTillEnd < samplesToWrite) {
          size_t samplesAfterWrapAround = samplesToWrite - samplesTillEnd;
@@ -266,6 +256,8 @@ void BeatPlayer::run()
       else {
          frames = snd_pcm_writei(handle, &playBackBuffer[samplesOffset], samplesToWrite);
       }
+
+      // check for errors during sample delivery
       if (frames < 0) {
          cout << "Do pcm recover" << endl;
          frames = snd_pcm_recover(handle, static_cast<int>(frames), 0);
