@@ -16,14 +16,15 @@
 #include <mutex>
 #include <thread>
 #include <vector>
+#include <random>
 
 
 using namespace std;
 
 
 constexpr size_t PLAYBACK_RATE           = 48'000;  // [Hz]
-constexpr double PLAYBACK_MIN_ALSA_WRITE = 0.1;     // 100 ms
-constexpr double FADE_MIN_TIME           = 0.01;    // 10 ms
+constexpr double PLAYBACK_MIN_ALSA_WRITE = 0.1;     // [s]
+constexpr double FADE_MIN_TIME           = 0.025;   // [s]
 constexpr double FADE_MIN_PERCENTAGE     = 0.30;
 constexpr double PI                      = 3.141592653589793;
 
@@ -84,17 +85,18 @@ double getDuration(size_t samples) { return static_cast<double>(samples) / PLAYB
 size_t getNumbersOfSamples(double time) { return static_cast<size_t>(round(time * PLAYBACK_RATE)); }
 
 
-void generateInt16Sine(vector<int16_t>& data, const size_t freq, const double lengthS)
+vector<int16_t> generateInt16Sine(const double freq, const double lengthS)
 {
    auto samples = static_cast<size_t>(floor(PLAYBACK_RATE * lengthS));
 
-   data.clear();
+   vector<int16_t> data;
    data.reserve(samples);
 
    for (size_t samIdx = 0; samIdx < samples; samIdx++) {
       double sample = sin(samIdx * 2 * PI * freq / PLAYBACK_RATE);
       data.emplace_back(static_cast<int16_t>(INT16_MAX * 0.75 * sample));
    }
+   return data;
 }
 
 
@@ -136,13 +138,10 @@ void BeatPlayer::start()
    double lengthS = getDuration(beat.size());
 
    // Fade the beat in and out to avoid click/pop noises because of too sudden output value
-   // changes: First 2 ms is fading in, last 2 ms is fading out If the beat length is less then 8
-   // ms use 25% each for fading in and out
-   auto calcRampingSteps = [](double l) -> size_t {
-      return floor(PLAYBACK_RATE * l * FADE_MIN_PERCENTAGE);
-   };
-   auto rampingSteps =
-      (lengthS < FADE_MIN_TIME) ? calcRampingSteps(lengthS) : calcRampingSteps(FADE_MIN_TIME);
+   // changes
+   auto rampingSteps = (lengthS * FADE_MIN_PERCENTAGE < FADE_MIN_TIME)
+                          ? getNumbersOfSamples(lengthS * FADE_MIN_PERCENTAGE)
+                          : getNumbersOfSamples(FADE_MIN_TIME);
 
    // Since fadeInOut only uses the first x and last y samples,
    // make sure not to fade out zero values
@@ -175,6 +174,12 @@ void BeatPlayer::start()
    }
    else {
       playBackBuffer = localBeat;
+   }
+
+   random_device rd;
+   uniform_int_distribution<int> dither(0, 3);
+   for (auto& sample : playBackBuffer) {
+      sample += dither(rd);
    }
 
    cout << "Playing at " << beatRate << " bpm" << endl;

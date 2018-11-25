@@ -91,7 +91,7 @@ private:
 /// \param[out]  data     samples to be generated
 /// \param[in]   freq     tone frequency
 /// \param[in]   lengthS  length in seconds
-void generateInt16Sine(vector<int16_t>& data, const size_t freq, const double lengthS);
+vector<int16_t> generateInt16Sine(const double freq, const double lengthS);
 
 }  // namespace mnome
 

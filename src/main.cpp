@@ -3,10 +3,10 @@
 #include "BeatPlayer.hpp"
 #include "Repl.hpp"
 
+#include <cmath>
+#include <csignal>
 #include <memory>
 #include <mutex>
-
-#include <csignal>
 
 
 using namespace std;
@@ -24,11 +24,14 @@ public:
    /// Ctor
    Mnome() : bp{80}
    {
+      auto halfToneOffset = [](double baseFreq, size_t offset) -> double {
+         return baseFreq * pow(pow(2, 1 / 12.0), offset);
+      };
+      double normalBeatHz      = halfToneOffset(440, 2);           // base tone = B
+      double accentuatedBeatHz = halfToneOffset(normalBeatHz, 7);  // base tone + quint
       // generate the beat
-      vector<TBeatDataType> beatData;
-      generateInt16Sine(beatData, 500, 0.050);
-      vector<TBeatDataType> accentuatedBeat;
-      generateInt16Sine(accentuatedBeat, 750, 0.050);
+      vector<TBeatDataType> beatData{generateInt16Sine(normalBeatHz, 0.050)};
+      vector<TBeatDataType> accentuatedBeat{generateInt16Sine(accentuatedBeatHz, 0.050)};
 
       bp.setBeat(beatData);
       bp.setAccentuatedBeat(accentuatedBeat);
@@ -80,8 +83,10 @@ public:
 }  // namespace mnome
 
 
+namespace {
 mutex AppMutex;
 unique_ptr<mnome::Mnome> App;
+}  // namespace
 
 
 void shutDownAppHandler(int)
