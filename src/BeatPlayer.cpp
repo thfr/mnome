@@ -14,9 +14,9 @@
 #include <cstdint>
 #include <iostream>
 #include <mutex>
+#include <random>
 #include <thread>
 #include <vector>
-#include <random>
 
 
 using namespace std;
@@ -34,6 +34,52 @@ static const char* PLAYBACK_ALSA_DEVICE = "default";
 namespace mnome {
 
 using TBeatDataType = int16_t;
+
+void lowPass20KHz(vector<TBeatDataType>& signal)
+{
+   /* Digital filter designed by mkfilter/mkshape/gencode   A.J. Fisher
+    *    Command line: /www/usr/fisher/helpers/mkfilter -Bu -Lp -o 2 -a 4.1666666667e-01
+    * 0.0000000000e+00 -l */
+
+   constexpr size_t NZEROS = 2;
+   constexpr size_t NPOLES = 2;
+   constexpr double GAIN   = 1.450734152e+00;
+
+   double xv[NZEROS + 1], yv[NPOLES + 1];
+
+   for (auto& sample : signal) {
+      xv[0]  = xv[1];
+      xv[1]  = xv[2];
+      xv[2]  = sample / GAIN;
+      yv[0]  = yv[1];
+      yv[1]  = yv[2];
+      yv[2]  = (xv[0] + xv[2]) + 2 * xv[1] + (-0.4775922501 * yv[0]) + (-1.2796324250 * yv[1]);
+      sample = round(yv[2]);
+   }
+};
+
+void highPass20Hz(vector<TBeatDataType>& signal)
+{
+   /* Digital filter designed by mkfilter/mkshape/gencode   A.J. Fisher
+    *    Command line: /www/usr/fisher/helpers/mkfilter -Bu -Lp -o 2 -a 4.1666666667e-01
+    * 0.0000000000e+00 -l */
+
+   constexpr size_t NZEROS = 2;
+   constexpr size_t NPOLES = 2;
+   constexpr double GAIN   = 1.001852916e+00;
+
+   double xv[NZEROS + 1], yv[NPOLES + 1];
+
+   for (auto& sample : signal) {
+      xv[0]  = xv[1];
+      xv[1]  = xv[2];
+      xv[2]  = sample / GAIN;
+      yv[0]  = yv[1];
+      yv[1]  = yv[2];
+      yv[2]  = (xv[0] + xv[2]) - 2 * xv[1] + (-0.9963044430 * yv[0]) + (1.9962976018 * yv[1]);
+      sample = round(yv[2]);
+   }
+};
 
 /// Fade a signal in and out
 /// \tparam  T  datatype of the signal
@@ -55,7 +101,7 @@ void fadeInOut(vector<TSample>& data, size_t fadeInSamples, size_t fadeOutSample
    //              r = ratio
 
    // apply all factors for the fade in
-   double startValue  = 2.0 / INT16_MAX;
+   double startValue  = 1.0 / INT16_MAX;
    double fadeInRatio = pow(1.0 / startValue, 1.0 / fadeInSamples);
    double factor      = startValue;
    for (size_t samIdx = 0; samIdx < fadeInSamples; ++samIdx) {
@@ -71,6 +117,11 @@ void fadeInOut(vector<TSample>& data, size_t fadeInSamples, size_t fadeOutSample
       data[samIdx] *= factor;
       factor *= fadeOutRatio;
    };
+
+   // filter output so that the signal stays inbetween 20 and 20000Hz
+   // this removes audible aliasing effects
+   lowPass20KHz(data);
+   highPass20Hz(data);
 }
 
 
