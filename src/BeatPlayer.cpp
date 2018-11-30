@@ -14,7 +14,6 @@
 #include <cstdint>
 #include <iostream>
 #include <mutex>
-#include <random>
 #include <thread>
 #include <vector>
 
@@ -35,6 +34,9 @@ namespace mnome {
 
 using TBeatDataType = int16_t;
 
+
+// Generated with http://www-users.cs.york.ac.uk/~fisher/mkfilter/ - no license given -
+// and adjusted to work as a standalone function.
 void lowPass20KHz(vector<TBeatDataType>& signal)
 {
    /* Digital filter designed by mkfilter/mkshape/gencode   A.J. Fisher
@@ -56,8 +58,10 @@ void lowPass20KHz(vector<TBeatDataType>& signal)
       yv[2]  = (xv[0] + xv[2]) + 2 * xv[1] + (-0.4775922501 * yv[0]) + (-1.2796324250 * yv[1]);
       sample = round(yv[2]);
    }
-};
+}
 
+// Generated with http://www-users.cs.york.ac.uk/~fisher/mkfilter/ - no license given -
+// and adjusted to work as a standalone function.
 void highPass20Hz(vector<TBeatDataType>& signal)
 {
    /* Digital filter designed by mkfilter/mkshape/gencode   A.J. Fisher
@@ -79,7 +83,7 @@ void highPass20Hz(vector<TBeatDataType>& signal)
       yv[2]  = (xv[0] + xv[2]) - 2 * xv[1] + (-0.9963044430 * yv[0]) + (1.9962976018 * yv[1]);
       sample = round(yv[2]);
    }
-};
+}
 
 /// Fade a signal in and out
 /// \tparam  T  datatype of the signal
@@ -225,12 +229,6 @@ void BeatPlayer::start()
    }
    else {
       playBackBuffer = localBeat;
-   }
-
-   random_device rd;
-   uniform_int_distribution<int> dither(0, 3);
-   for (auto& sample : playBackBuffer) {
-      sample += dither(rd);
    }
 
    cout << "Playing at " << beatRate << " bpm" << endl;
