@@ -39,6 +39,16 @@ public:
 
       // set commands for the repl
       commandlist_t commands;
+      // make ENTER start and stop
+      commands.emplace("", [this](string&) {
+         if (bp.isRunning()) {
+            this->bp.stop();
+            this->bp.waitForStop();
+         }
+         else {
+            this->bp.start();
+         }
+      });
       commands.emplace("exit", [this](string&) { this->repl.stop(); });
       commands.emplace("start", [this](string&) { this->bp.start(); });
       commands.emplace("stop", [this](string&) {

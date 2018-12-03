@@ -78,9 +78,6 @@ void Repl::run()
 
       rtrim(ltrim(input));
 
-      if (input.empty()) {
-         continue;
-      }
       size_t cmdSep = input.find(' ', 0);
 
       // find command in command list
