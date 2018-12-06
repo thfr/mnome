@@ -10,16 +10,17 @@ namespace mnome {
 /// \note see https://stackoverflow.com/a/217605
 static inline std::string& ltrim(std::string& s)
 {
-   s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](int c) { return 0 == std::isspace(c); }));
-   return s;
+    s.erase(s.begin(),
+            std::find_if(s.begin(), s.end(), [](int c) { return 0 == std::isspace(c); }));
+    return s;
 }
 
 /// Trim trailing spaces of a string
 /// \note see https://stackoverflow.com/a/217605
 static inline void rtrim(std::string& s)
 {
-   s.erase(std::find_if(s.rbegin(), s.rend(), [](int ch) { return 0 == std::isspace(ch); }).base(),
-           s.end());
+    s.erase(std::find_if(s.rbegin(), s.rend(), [](int ch) { return 0 == std::isspace(ch); }).base(),
+            s.end());
 }
 
 
@@ -33,72 +34,73 @@ Repl::Repl(commandlist_t& cmds) : commands{cmds}, myThread{nullptr}, requestStop
 
 Repl::~Repl()
 {
-   stop();
-   waitForStop();
+    stop();
+    waitForStop();
 }
 
 void Repl::setCommands(const commandlist_t& cmds) { commands = cmds; }
 
 void Repl::start()
 {
-   waitForStop();
-   myThread = make_unique<thread>([this]() { this->run(); });
+    waitForStop();
+    myThread = make_unique<thread>([this]() { this->run(); });
 }
 
 void Repl::stop()
 {
-   if (isRunning()) {
-      requestStop = true;
-   }
+    if (isRunning()) {
+        requestStop = true;
+    }
 }
 
 bool Repl::isRunning() const { return myThread && myThread->joinable(); }
 
 void Repl::waitForStop() const
 {
-   if (isRunning()) {
-      myThread->join();
-   }
+    if (isRunning()) {
+        myThread->join();
+    }
 }
 
 void Repl::run()
 {
-   string input;
-   while (!requestStop) {
-      // prompt
-      cout << endl;
-      cout << "[mnome]: ";
+    string input;
+    while (!requestStop) {
+        // prompt
+        cout << endl;
+        cout << "[mnome]: ";
 
-      getline(cin, input);
+        getline(cin, input);
 
-      // catch ctrl+d
-      if (cin.eof()) {
-         break;
-      }
+        // catch ctrl+d
+        if (cin.eof()) {
+            break;
+        }
 
-      rtrim(ltrim(input));
+        rtrim(ltrim(input));
 
-      size_t cmdSep = input.find(' ', 0);
+        size_t cmdSep = input.find(' ', 0);
 
-      // find command in command list
-      string commandString = input.substr(0, cmdSep);
-      auto possibleCommand = commands.find(commandString);
-      if (end(commands) == possibleCommand) {
-         cout << "\"" << commandString << "\" is not a valid command" << endl;
-         continue;
-      }
+        // find command in command list
+        string commandString = input.substr(0, cmdSep);
+        auto possibleCommand = commands.find(commandString);
+        if (end(commands) == possibleCommand) {
+            cout << "\"" << commandString << "\" is not a valid command" << endl;
+            continue;
+        }
 
-      try {
-         // execute command with parameters
-         string args = (cmdSep != string::npos) ? input.substr(cmdSep + 1, string::npos) : string{};
-         possibleCommand->second(args);
-      }
-      catch (const std::exception& e) {  // reference to the base of a polymorphic object
-         cout << "Could not get that, please try again" << endl;
-         cout << e.what();  // information from length_error printed
-      }
-   }
-   requestStop = false;
+        try {
+            // execute command with parameters
+            string args =
+                (cmdSep != string::npos) ? input.substr(cmdSep + 1, string::npos) : string{};
+            possibleCommand->second(args);
+        }
+        catch (const std::exception& e) {  // reference to the base of a polymorphic object
+            cout << "Could not get that, please try again" << endl;
+            cout << e.what();  // information from length_error printed
+        }
+    }
+    requestStop = false;
 }
 
 }  // namespace mnome
