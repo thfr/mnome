@@ -32,8 +32,6 @@ static const char* PLAYBACK_ALSA_DEVICE = "default";
 
 namespace mnome {
 
-using TBeatDataType = int16_t;
-
 
 // Generated with http://www-users.cs.york.ac.uk/~fisher/mkfilter/ - no license given -
 // and adjusted to work as a standalone function.
@@ -140,7 +138,7 @@ double getDuration(size_t samples) { return static_cast<double>(samples) / PLAYB
 size_t getNumbersOfSamples(double time) { return static_cast<size_t>(round(time * PLAYBACK_RATE)); }
 
 
-vector<int16_t> generateInt16Sine(const double freq, const double lengthS)
+vector<int16_t> generateTone(const double freq, const double lengthS, const size_t addHarmonics)
 {
     auto samples = static_cast<size_t>(floor(PLAYBACK_RATE * lengthS));
 
@@ -149,7 +147,15 @@ vector<int16_t> generateInt16Sine(const double freq, const double lengthS)
 
     for (size_t samIdx = 0; samIdx < samples; samIdx++) {
         double sample = sin(samIdx * 2 * PI * freq / PLAYBACK_RATE);
-        data.emplace_back(static_cast<int16_t>(INT16_MAX * 0.75 * sample));
+
+        // add harmonics
+        double harmonicGainFactor = 0.5;
+        double gain               = 0.5;
+        for (size_t harmonic = 0; harmonic < addHarmonics; ++harmonic) {
+            gain *= harmonicGainFactor;
+            sample += gain * sin(samIdx * 2 * PI * (harmonic + 2) * freq / PLAYBACK_RATE);
+        }
+        data.emplace_back(static_cast<int16_t>(INT16_MAX * 0.5 * sample));
     }
     return data;
 }

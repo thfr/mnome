@@ -16,8 +16,8 @@ using namespace std;
 
 namespace mnome {
 
-using TBeatDataType = int16_t;
 
+using TBeatDataType = int16_t;
 
 /// Plays a beat at a certain number of times per minute
 class BeatPlayer
@@ -87,11 +87,12 @@ private:
 };
 
 
-/// Generate a sine signal
-/// \param[out]  data     samples to be generated
-/// \param[in]   freq     tone frequency
-/// \param[in]   lengthS  length in seconds
-vector<int16_t> generateInt16Sine(const double freq, const double lengthS);
+/// Generate a tone
+/// \param[in]   freq       tone frequency
+/// \param[in]   lengthS    length in seconds
+/// \param[in]   harmonics  number of harmonics to add to the tone
+/// \return      data       samples to be generated
+vector<int16_t> generateTone(const double freq, const double lengthS, const size_t addHarmonics);
 
 }  // namespace mnome
 

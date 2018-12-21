@@ -30,8 +30,8 @@ public:
         double normalBeatHz      = halfToneOffset(440, 2);           // base tone = B
         double accentuatedBeatHz = halfToneOffset(normalBeatHz, 7);  // base tone + quint
         // generate the beat
-        vector<TBeatDataType> beatData{generateInt16Sine(normalBeatHz, 0.050)};
-        vector<TBeatDataType> accentuatedBeat{generateInt16Sine(accentuatedBeatHz, 0.050)};
+        vector<TBeatDataType> beatData{generateTone(normalBeatHz, 0.0750, 4)};
+        vector<TBeatDataType> accentuatedBeat{generateTone(accentuatedBeatHz, 0.0750, 4)};
 
         bp.setBeat(beatData);
         bp.setAccentuatedBeat(accentuatedBeat);
