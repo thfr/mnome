@@ -238,7 +238,11 @@ void BeatPlayer::start()
         playBackBuffer = localBeat;
     }
 
-    cout << "Playing at " << beatRate << " bpm" << endl;
+    string pattern = "";
+    for (auto accent : accentuatedPattern) {
+        pattern += (accent) ? "*" : "+";
+    }
+    cout << "Playing " << pattern << " at " << beatRate << " bpm" << endl;
 
     // make sure join was called before potentially destroying a previous thread object
     waitForStop();
