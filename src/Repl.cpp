@@ -29,8 +29,14 @@ class ForbiddenCommandExecption : exception
 };
 
 
-Repl::Repl() : myThread{nullptr}, requestStop{false} {}
-Repl::Repl(commandlist_t& cmds) : commands{cmds}, myThread{nullptr}, requestStop{false} {}
+Repl::Repl() : inputStream{std::cin}, outputStream{std::cout}, myThread{nullptr}, requestStop{false}
+{
+}
+
+Repl::Repl(commandlist_t& cmds, std::istream& is, std::ostream& os)
+    : commands{cmds}, inputStream{is}, outputStream{os}, myThread{nullptr}, requestStop{false}
+{
+}
 
 Repl::~Repl()
 {
@@ -67,13 +73,13 @@ void Repl::run()
     string input;
     while (!requestStop) {
         // prompt
-        cout << endl;
-        cout << "[mnome]: ";
+        outputStream << endl;
+        outputStream << "[mnome]: ";
 
-        getline(cin, input);
+        getline(inputStream, input);
 
         // catch ctrl+d
-        if (cin.eof()) {
+        if (inputStream.eof()) {
             break;
         }
 
@@ -85,7 +91,7 @@ void Repl::run()
         string commandString = input.substr(0, cmdSep);
         auto possibleCommand = commands.find(commandString);
         if (end(commands) == possibleCommand) {
-            cout << "\"" << commandString << "\" is not a valid command" << endl;
+            outputStream << "\"" << commandString << "\" is not a valid command" << endl;
             continue;
         }
 
@@ -96,8 +102,8 @@ void Repl::run()
             possibleCommand->second(args);
         }
         catch (const std::exception& e) {  // reference to the base of a polymorphic object
-            cout << "Could not get that, please try again" << endl;
-            cout << e.what();  // information from length_error printed
+            outputStream << "Could not get that, please try again" << endl;
+            outputStream << e.what();  // information from length_error printed
         }
     }
     requestStop = false;

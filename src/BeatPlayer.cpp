@@ -264,7 +264,7 @@ void BeatPlayer::run()
     unique_ptr<struct pollfd> pfd = make_unique<struct pollfd>();
 
     // house keeping before exiting
-    auto cleanup = [&]() {
+    auto cleanup = [&handle, this]() {
         snd_pcm_close(handle);
         requestStop = false;
     };
@@ -314,7 +314,7 @@ void BeatPlayer::run()
             return;
         }
 
-        // delivery samples to sound buffer
+        // deliver samples to sound buffer
         size_t samplesTillEnd = playBackBuffer.size() - samplesOffset;
         if (samplesTillEnd < samplesToWrite) {
             size_t samplesAfterWrapAround = samplesToWrite - samplesTillEnd;

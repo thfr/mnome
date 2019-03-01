@@ -25,6 +25,8 @@ using commandlist_t = unordered_map<string, function<void(string&)>>;
 class Repl
 {
     commandlist_t commands;
+    std::istream& inputStream;
+    std::ostream& outputStream;
     std::unique_ptr<thread> myThread;
     atomic_bool requestStop;
 
@@ -33,7 +35,7 @@ public:
     Repl();
 
     /// Ctor with command list
-    Repl(commandlist_t& cmds);
+    Repl(commandlist_t& cmds, std::istream& is = std::cin, std::ostream& os = std::cout);
 
     ~Repl();
 
