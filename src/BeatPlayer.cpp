@@ -45,7 +45,8 @@ void lowPass20KHz(vector<TBeatDataType>& signal)
     constexpr size_t NPOLES = 2;
     constexpr double GAIN   = 1.450734152e+00;
 
-    double xv[NZEROS + 1], yv[NPOLES + 1];
+    double xv[NZEROS + 1]{};
+    double yv[NPOLES + 1]{};
 
     for (auto& sample : signal) {
         xv[0]  = xv[1];
@@ -54,7 +55,7 @@ void lowPass20KHz(vector<TBeatDataType>& signal)
         yv[0]  = yv[1];
         yv[1]  = yv[2];
         yv[2]  = (xv[0] + xv[2]) + 2 * xv[1] + (-0.4775922501 * yv[0]) + (-1.2796324250 * yv[1]);
-        sample = round(yv[2]);
+        sample = static_cast<TBeatDataType>(round(yv[2]));
     }
 }
 
@@ -70,7 +71,8 @@ void highPass20Hz(vector<TBeatDataType>& signal)
     constexpr size_t NPOLES = 2;
     constexpr double GAIN   = 1.001852916e+00;
 
-    double xv[NZEROS + 1], yv[NPOLES + 1];
+    double xv[NZEROS + 1]{};
+    double yv[NPOLES + 1]{};
 
     for (auto& sample : signal) {
         xv[0]  = xv[1];
@@ -79,7 +81,7 @@ void highPass20Hz(vector<TBeatDataType>& signal)
         yv[0]  = yv[1];
         yv[1]  = yv[2];
         yv[2]  = (xv[0] + xv[2]) - 2 * xv[1] + (-0.9963044430 * yv[0]) + (1.9962976018 * yv[1]);
-        sample = round(yv[2]);
+        sample = static_cast<TBeatDataType>(round(yv[2]));
     }
 }
 
