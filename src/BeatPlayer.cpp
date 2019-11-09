@@ -240,7 +240,7 @@ void BeatPlayer::start()
         playBackBuffer = localBeat;
     }
 
-    string pattern = "";
+    string pattern;
     for (auto accent : accentuatedPattern) {
         pattern += (accent) ? "*" : "+";
     }
@@ -257,10 +257,10 @@ void BeatPlayer::run()
 {
     requestStop = false;
 
-    int pfdcount;
-    int err;
-    snd_pcm_t* handle;
-    snd_pcm_sframes_t frames;
+    int pfdcount{};
+    int err{};
+    snd_pcm_t* handle{};
+    snd_pcm_sframes_t frames{};
     unique_ptr<struct pollfd> pfd = make_unique<struct pollfd>();
 
     // house keeping before exiting
