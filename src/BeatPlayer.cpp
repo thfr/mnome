@@ -10,8 +10,6 @@
 
 #include "BeatPlayer.hpp"
 
-#include <alsa/asoundlib.h>
-
 #include <algorithm>
 #include <atomic>
 #include <cassert>
