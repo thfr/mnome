@@ -5,9 +5,10 @@
 #ifndef MNOME_BEATPLAYER_H
 #define MNOME_BEATPLAYER_H
 
+#include "miniaudio.h"
+
 #include <atomic>
 #include <mutex>
-#include <thread>
 #include <vector>
 
 
@@ -23,13 +24,21 @@ using TBeatDataType = int16_t;
 class BeatPlayer
 {
     size_t beatRate;
-    mutex setterMutex;
+    std::recursive_mutex setterMutex;
     vector<TBeatDataType> beat;
     vector<TBeatDataType> accentuatedBeat;
     vector<TBeatDataType> playBackBuffer;
     vector<bool> accentuatedPattern;
-    std::unique_ptr<thread> myThread;
-    atomic_bool requestStop;
+    atomic_bool requestStop{false};
+    atomic_bool running{false};
+
+    // miniaudio
+    ma_context context;
+    ma_device_config deviceConfig;
+    ma_device device;
+    ma_audio_buffer_config buf_config;
+    ma_audio_buffer buf;
+
 
 public:
     /// Constructor
@@ -72,18 +81,15 @@ public:
     /// \param  bpm  beats per minute
     void setDataAndBPM(const vector<TBeatDataType>& beatData, size_t bpm);
 
-    /// Indicates whether the thread is running
+    /// Indicates whether the audio playback is running
     bool isRunning() const;
 
-    /// Wait for the REPL thread to finish
-    void waitForStop() const;
-
 private:
-    /// Thread method
-    void run();
+    /// Start the audio playback
+    void startAudio();
 
-    /// Restart the thread if was started
-    void restartNecessary();
+    /// Restart the audio playback
+    void restart();
 };
 
 

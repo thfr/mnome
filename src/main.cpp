@@ -43,7 +43,6 @@ public:
         commands.emplace("", [this](string&) {
             if (bp.isRunning()) {
                 this->bp.stop();
-                this->bp.waitForStop();
             }
             else {
                 this->bp.start();
@@ -51,10 +50,7 @@ public:
         });
         commands.emplace("exit", [this](string&) { this->repl.stop(); });
         commands.emplace("start", [this](string&) { this->bp.start(); });
-        commands.emplace("stop", [this](string&) {
-            this->bp.stop();
-            this->bp.waitForStop();
-        });
+        commands.emplace("stop", [this](string&) { this->bp.stop(); });
         commands.emplace("bpm", [this](string& s) {
             size_t bpm = !s.empty() ? stoul(s, nullptr, 10) : 80;
             this->bp.setBPM(bpm);

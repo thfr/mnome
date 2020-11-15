@@ -4,18 +4,20 @@ project (Mnome)
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wshadow -Werror -Wall -Wextra -pedantic")
-set(CMAKE_CXX_CLANG_TIDY clang-tidy -checks=-*,readability-*)
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wshadow -Werror -Wall -Wextra -pedantic")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wshadow -Wall -Wextra -pedantic")
+#set(CMAKE_CXX_CLANG_TIDY clang-tidy -checks=-*,readability-*)
 
 set(SOURCE_FILES
     ./src/BeatPlayer.cpp
     ./src/BeatPlayer.hpp
     ./src/Repl.cpp
     ./src/Repl.hpp
+    ./src/miniaudio.h
     )
 
 add_library(mnomelib STATIC ${SOURCE_FILES})
-target_link_libraries(mnomelib asound pthread)
+target_link_libraries(mnomelib dl m asound pthread)
 add_executable (mnome ./src/main.cpp)
 target_link_libraries(mnome mnomelib)
 

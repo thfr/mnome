@@ -2,6 +2,12 @@
 ///
 /// Plays a beat
 
+// MINIAUDIO_IMPLEMENTATION causes the current object file to have all of miniaudio's functions
+// implemented. Because BeatPlayer.hpp also includes miniaudio.h we need to import miniaudio.h with
+// the MINIAUDIO_IMPLEMENTATION defintion before including BeatPlayer.hpp
+#define MINIAUDIO_IMPLEMENTATION
+#include "miniaudio.h"
+
 #include "BeatPlayer.hpp"
 
 #include <alsa/asoundlib.h>
@@ -14,7 +20,6 @@
 #include <cstdint>
 #include <iostream>
 #include <mutex>
-#include <thread>
 #include <vector>
 
 
@@ -26,8 +31,6 @@ constexpr double PLAYBACK_MIN_ALSA_WRITE = 0.1;     // [s]
 constexpr double FADE_MIN_TIME           = 0.025;   // [s]
 constexpr double FADE_MIN_PERCENTAGE     = 0.30;
 constexpr double PI                      = 3.141592653589793;
-
-static const char* PLAYBACK_ALSA_DEVICE = "default";
 
 
 namespace mnome {
@@ -163,24 +166,18 @@ vector<int16_t> generateTone(const double freq, const double lengthS, const size
 }
 
 
-BeatPlayer::BeatPlayer(const size_t brate) : beatRate(brate), myThread{nullptr}, requestStop{false}
-{
-}
+BeatPlayer::BeatPlayer(const size_t brate) : beatRate(brate) {}
 
-BeatPlayer::~BeatPlayer()
-{
-    stop();
-    waitForStop();
-}
+BeatPlayer::~BeatPlayer() { stop(); }
+
 
 void BeatPlayer::start()
 {
+    lock_guard<recursive_mutex> guard(setterMutex);
     if (isRunning()) {
         cout << "Error: BeatPlayer is already running, but was started again" << endl;
         return;
     }
-
-    lock_guard<mutex> guard(setterMutex);
 
     playBackBuffer.clear();
 
@@ -246,130 +243,90 @@ void BeatPlayer::start()
     }
     cout << "Playing " << pattern << " at " << beatRate << " bpm" << endl;
 
-    // make sure join was called before potentially destroying a previous thread object
-    waitForStop();
-    // start the thread
-    myThread = make_unique<thread>([this]() { this->run(); });
+    startAudio();
 }
 
 
-void BeatPlayer::run()
+void miniaudio_data_callback(ma_device* pDevice, void* pOutput, const void* pInput,
+                             ma_uint32 frameCount)
 {
-    requestStop = false;
-
-    int pfdcount{};
-    int err{};
-    snd_pcm_t* handle{};
-    snd_pcm_sframes_t frames{};
-    unique_ptr<struct pollfd> pfd = make_unique<struct pollfd>();
-
-    // house keeping before exiting
-    auto cleanup = [&handle, this]() {
-        snd_pcm_close(handle);
-        requestStop = false;
-    };
-
-    // open ALSA device
-    err = snd_pcm_open(&handle, PLAYBACK_ALSA_DEVICE, SND_PCM_STREAM_PLAYBACK, SND_PCM_ASYNC);
-    if (err < 0) {
-        cout << "Could not open device " << PLAYBACK_ALSA_DEVICE << endl;
-        cleanup();
+    ma_audio_buffer* buffer = (ma_audio_buffer*)pDevice->pUserData;
+    if (buffer == nullptr) {
+        cout << "Buffer is empty\n";
+        cout.flush();
         return;
     }
-
-    // set playback settings
-    err = snd_pcm_set_params(handle, SND_PCM_FORMAT_S16, SND_PCM_ACCESS_RW_INTERLEAVED, 1,
-                             PLAYBACK_RATE, 1, 500'000);
-    if (err < 0) {
-        cout << "Could not open device " << PLAYBACK_ALSA_DEVICE << endl;
-        cleanup();
-        return;
-    }
-
-    // get count and file descriptors for poll to wait for
-    pfdcount = snd_pcm_poll_descriptors_count(handle);
-    if (pfdcount < 0) {
-        cout << "Error getting pcm poll descriptors count for " << PLAYBACK_ALSA_DEVICE << endl;
-        cleanup();
-        return;
-    }
-    err = snd_pcm_poll_descriptors(handle, pfd.get(), pfdcount);
-    if (err < 0) {
-        cout << "Error getting pcm poll descriptors for " << PLAYBACK_ALSA_DEVICE << endl;
-        cleanup();
-        return;
-    }
-
-    size_t samplesOffset = 0;
-    size_t samplesToWrite =
-        min(getNumbersOfSamples(PLAYBACK_MIN_ALSA_WRITE), playBackBuffer.size());
-    while (!requestStop) {
-        // wait until next write
-        uint16_t revents;
-        poll(pfd.get(), pfdcount, -1);
-        snd_pcm_poll_descriptors_revents(handle, pfd.get(), pfdcount, &revents);
-        if (((revents & POLLERR) != 0) || ((revents & POLLOUT) == 0)) {
-            cout << "Error during poll on " << PLAYBACK_ALSA_DEVICE << " occured" << endl;
-            cleanup();
-            return;
-        }
-
-        // deliver samples to sound buffer
-        size_t samplesTillEnd = playBackBuffer.size() - samplesOffset;
-        if (samplesTillEnd < samplesToWrite) {
-            size_t samplesAfterWrapAround = samplesToWrite - samplesTillEnd;
-            frames = snd_pcm_writei(handle, &playBackBuffer[samplesOffset], samplesTillEnd);
-            frames += snd_pcm_writei(handle, &playBackBuffer[0], samplesAfterWrapAround);
-        }
-        else {
-            frames = snd_pcm_writei(handle, &playBackBuffer[samplesOffset], samplesToWrite);
-        }
-
-        // check for errors during sample delivery
-        if (frames < 0) {
-            cout << "Do pcm recover" << endl;
-            frames = snd_pcm_recover(handle, static_cast<int>(frames), 0);
-        }
-        if (frames < 0) {
-            cout << "snd_pcm_writei failed:" << snd_strerror(static_cast<int>(frames)) << "\n";
-            break;
-        }
-
-        // check short write
-        // set a new sample offset based on number of samples written
-        if ((frames > 0) && (frames != static_cast<snd_pcm_sframes_t>(samplesToWrite))) {
-            cout << "Short write (expected " << samplesToWrite << " but wrote " << frames
-                 << " instead)\n";
-        }
-        samplesOffset = (samplesOffset + frames) % playBackBuffer.size();
-    }
-
-    cleanup();
+    ma_audio_buffer_read_pcm_frames(buffer, pOutput, frameCount, true);
+    (void)pInput;
 }
 
-void BeatPlayer::restartNecessary()
+
+void BeatPlayer::startAudio()
 {
+    lock_guard<recursive_mutex> lg(setterMutex);
     if (isRunning()) {
-        stop();
-        waitForStop();
-        start();
+        cout << "Audio playback was started though it is already running\n";
+        return;
     }
+    running = true;
+    ma_result result;
+    result = ma_context_init(nullptr, 0, nullptr, &context);
+
+    // put the playback buffer inside the ma_audio_buffer structure
+    buf_config = ma_audio_buffer_config_init(ma_format_s16, 1, playBackBuffer.size(),
+                                             playBackBuffer.data(), nullptr);
+    result     = ma_audio_buffer_init(&buf_config, &buf);
+    if (result != MA_SUCCESS) {
+        cout << "Audio buffer initialization failed, aborting\n";
+        running = false;
+        return;
+    }
+
+    deviceConfig                          = ma_device_config_init(ma_device_type_playback);
+    deviceConfig.playback.format          = ma_format_s16;
+    deviceConfig.playback.channels        = 1;
+    deviceConfig.sampleRate               = 48000;
+    deviceConfig.periods                  = 2;
+    deviceConfig.periodSizeInMilliseconds = PLAYBACK_MIN_ALSA_WRITE * 1000;
+    deviceConfig.dataCallback             = miniaudio_data_callback;
+    deviceConfig.pUserData                = &buf;
+
+    result = ma_device_init(&context, &deviceConfig, &device);
+    if (result != MA_SUCCESS) {
+        cout << "Device initialization failed, aborting\n";
+        running = false;
+        return;
+    }
+
+    ma_device_start(&device);
 }
 
 void BeatPlayer::stop()
 {
+    lock_guard<recursive_mutex> lg(setterMutex);
     if (isRunning()) {
-        requestStop = true;
+        ma_device_uninit(&device);
+        ma_audio_buffer_uninit(&buf);
+        ma_context_uninit(&context);
+        running = false;
+    }
+}
+
+void BeatPlayer::restart()
+{
+    if (isRunning()) {
+        stop();
+        start();
     }
 }
 
 void BeatPlayer::setBPM(size_t bpm)
 {
     {
-        lock_guard<mutex> guard(setterMutex);
+        lock_guard<recursive_mutex> guard(setterMutex);
         beatRate = bpm;
     }
-    restartNecessary();
+    restart();
 }
 
 size_t BeatPlayer::getBPM() const { return beatRate; }
@@ -377,47 +334,40 @@ size_t BeatPlayer::getBPM() const { return beatRate; }
 void BeatPlayer::setAccentuatedBeat(const vector<TBeatDataType>& newBeat)
 {
     {
-        lock_guard<mutex> guard(setterMutex);
+        lock_guard<recursive_mutex> guard(setterMutex);
         accentuatedBeat = newBeat;
     }
-    restartNecessary();
+    restart();
 }
 
 void BeatPlayer::setBeat(const vector<TBeatDataType>& newBeat)
 {
     {
-        lock_guard<mutex> guard(setterMutex);
+        lock_guard<recursive_mutex> guard(setterMutex);
         beat = newBeat;
     }
-    restartNecessary();
+    restart();
 }
 
 void BeatPlayer::setDataAndBPM(const vector<TBeatDataType>& beatData, size_t bpm)
 {
     {
-        lock_guard<mutex> guard(setterMutex);
+        lock_guard<recursive_mutex> guard(setterMutex);
         beat     = beatData;
         beatRate = bpm;
     }
-    restartNecessary();
+    restart();
 }
 
 void BeatPlayer::setAccentuatedPattern(const vector<bool>& pattern)
 {
     {
-        lock_guard<mutex> guard(setterMutex);
+        lock_guard<recursive_mutex> guard(setterMutex);
         accentuatedPattern = pattern;
     }
-    restartNecessary();
+    restart();
 }
 
-bool BeatPlayer::isRunning() const { return myThread && myThread->joinable(); }
-
-void BeatPlayer::waitForStop() const
-{
-    if (isRunning()) {
-        myThread->join();
-    }
-}
+bool BeatPlayer::isRunning() const { return running; }
 
 }  // namespace mnome
