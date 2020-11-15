@@ -4,7 +4,6 @@ project('mnome', 'cpp',
 
 cc = meson.get_compiler('cpp')
 
-asound_dep = dependency('alsa')
 threads_dep = dependency('threads')
 math_dep = cc.find_library('m', required : false)
 dynamic_lib_dep = cc.find_library('dl', required: false)
@@ -18,14 +17,15 @@ mnome_lib = static_library('mnome',
 
 mnome_exe = executable('mnome',
   'src/main.cpp',
-  dependencies: [threads_dep, asound_dep, math_dep, dynamic_lib_dep],
+  dependencies: [threads_dep, math_dep, dynamic_lib_dep],
   link_with: mnome_lib,
   install: true,
   implib: true,
   )
 
 
-gtest_dep = dependency('gtest_main')
+gtest = subproject('gtest')
+gtest_dep = gtest.get_variable('gtest_main_dep')
 
 testapp = executable(
   'ReplTest',
