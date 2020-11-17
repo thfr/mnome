@@ -6,7 +6,7 @@
 // implemented. Because BeatPlayer.hpp also includes miniaudio.h we need to import miniaudio.h with
 // the MINIAUDIO_IMPLEMENTATION defintion before including BeatPlayer.hpp
 #define MINIAUDIO_IMPLEMENTATION
-#include "miniaudio.h"
+#include <miniaudio.h>
 
 #include "BeatPlayer.hpp"
 

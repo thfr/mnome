@@ -5,7 +5,7 @@
 #ifndef MNOME_BEATPLAYER_H
 #define MNOME_BEATPLAYER_H
 
-#include "miniaudio.h"
+#include <miniaudio.h>
 
 #include <atomic>
 #include <mutex>
