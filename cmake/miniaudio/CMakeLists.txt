@@ -1,3 +1,8 @@
+cmake_minimum_required(VERSION 3.5)
+project(Mnome-Miniaudio)
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
+
 include(FetchContent)
 FetchContent_Declare(miniaudio # version 0.10.25
                      URL "https://github.com/mackron/miniaudio/archive/140bf99065af08f771f1762604c2c62d60994127.zip")

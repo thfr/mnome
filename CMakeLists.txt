@@ -9,7 +9,7 @@ if(NOT MSVC)
     set(CMAKE_CXX_CLANG_TIDY clang-tidy -checks=-*,readability-*)
 endif(NOT MSVC)
 
-include(./cmake/miniaudio.cmake)
+add_subdirectory(cmake/miniaudio)
 
 set(SOURCE_FILES ./src/BeatPlayer.cpp ./src/BeatPlayer.hpp ./src/Repl.cpp ./src/Repl.hpp)
 
