@@ -12,25 +12,51 @@
 #include <vector>
 
 
-using namespace std;
-
-
 namespace mnome {
 
 
 using TBeatDataType = int16_t;
+
+
+/// A beat pattern is a list of different beat types
+///
+/// Currently accent, normal beat and pause beat types are supported.
+class BeatPattern
+{
+public:
+    enum BeatType : char
+    {
+        accent = '!',
+        beat   = '+',
+        pause  = '.',
+    };
+
+private:
+    std::vector<mnome::BeatPattern::BeatType> pattern{};
+
+public:
+    BeatPattern() = default;
+    BeatPattern(const std::string& pattern);
+    BeatPattern(const std::vector<mnome::BeatPattern::BeatType>& pattern);
+
+    void fromString(const std::string& strPattern);
+    std::string toString() const;
+
+    const std::vector<mnome::BeatPattern::BeatType>& getBeatPattern() const;
+};
+
 
 /// Plays a beat at a certain number of times per minute
 class BeatPlayer
 {
     size_t beatRate;
     std::recursive_mutex setterMutex;
-    vector<TBeatDataType> beat;
-    vector<TBeatDataType> accentuatedBeat;
-    vector<TBeatDataType> playBackBuffer;
-    vector<bool> accentuatedPattern;
-    atomic_bool requestStop{false};
-    atomic_bool running{false};
+    std::vector<TBeatDataType> beat;
+    std::vector<TBeatDataType> accentuatedBeat;
+    std::vector<TBeatDataType> playBackBuffer;
+    BeatPattern beatPattern{std::vector<BeatPattern::BeatType>{BeatPattern::BeatType::beat}};
+    std::atomic_bool requestStop{false};
+    std::atomic_bool running{false};
 
     // miniaudio
     ma_context context;
@@ -46,17 +72,19 @@ public:
     /// \param  beat      raw data of one beat
     BeatPlayer(size_t bRate);
 
+    BeatPlayer() = delete;
+
     ~BeatPlayer();
 
     /// Set the sound of the beat that is played back
     /// \param  newBeat  samples the represent the beat
-    void setBeat(const vector<TBeatDataType>& newBeat);
+    void setBeat(const std::vector<TBeatDataType>& newBeat);
 
     /// Set the sound of the beat that is played back
     /// \param  newBeat  samples the represent the accentuated beat
-    void setAccentuatedBeat(const vector<TBeatDataType>& newBeat);
+    void setAccentuatedBeat(const std::vector<TBeatDataType>& newBeat);
 
-    void setAccentuatedPattern(const vector<bool>& pattern);
+    void setAccentuatedPattern(const BeatPattern& pattern);
 
     /// Start the BeatPlayer
     void start();
@@ -74,12 +102,12 @@ public:
 
     /// Change the beat that is played back
     /// \param  beatData  The beat that is played back
-    void setAccentuatedBeatData(const vector<TBeatDataType>& beatData);
+    void setAccentuatedBeatData(const std::vector<TBeatDataType>& beatData);
 
     /// Change the beat and the beats per minute, for convenience
     /// \param  beatData  The beat that is played back
     /// \param  bpm  beats per minute
-    void setDataAndBPM(const vector<TBeatDataType>& beatData, size_t bpm);
+    void setDataAndBPM(const std::vector<TBeatDataType>& beatData, size_t bpm);
 
     /// Indicates whether the audio playback is running
     bool isRunning() const;
@@ -98,7 +126,8 @@ private:
 /// \param[in]   lengthS    length in seconds
 /// \param[in]   harmonics  number of harmonics to add to the tone
 /// \return      data       samples to be generated
-vector<int16_t> generateTone(const double freq, const double lengthS, const size_t addHarmonics);
+std::vector<int16_t> generateTone(const double freq, const double lengthS,
+                                  const size_t addHarmonics);
 
 }  // namespace mnome
 

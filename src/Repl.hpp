@@ -14,34 +14,31 @@
 #include <unordered_map>
 
 
-using namespace std;
-
-
 namespace mnome {
 
-using commandlist_t = unordered_map<string, function<void(string&)>>;
+using ReplCommandList = std::unordered_map<std::string, std::function<void(std::string&)>>;
 
 /// Read evaluate print loop
 class Repl
 {
-    commandlist_t commands;
+    ReplCommandList commands;
     std::istream& inputStream;
     std::ostream& outputStream;
-    std::unique_ptr<thread> myThread;
-    atomic_bool requestStop;
+    std::unique_ptr<std::thread> myThread;
+    std::atomic_bool requestStop;
 
 public:
     /// Ctor with empty command list
     Repl();
 
     /// Ctor with command list
-    Repl(commandlist_t& cmds, std::istream& is = std::cin, std::ostream& os = std::cout);
+    Repl(ReplCommandList& cmds, std::istream& is = std::cin, std::ostream& os = std::cout);
 
     ~Repl();
 
     /// Set the commands that the REPL should recognize
     /// \note Do not forget the exit/quit command
-    void setCommands(const commandlist_t& cmds);
+    void setCommands(const ReplCommandList& cmds);
 
     /// Start the read evaluate print loop
     void start();

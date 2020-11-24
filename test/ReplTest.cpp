@@ -6,6 +6,8 @@
 #include <iostream>
 #include <vector>
 
+using namespace std;
+
 namespace mnome {
 
 TEST(ReplTest, 1)
@@ -15,7 +17,7 @@ TEST(ReplTest, 1)
     const char* exit  = "exit";
     const char* start = "start";
 
-    commandlist_t commands;
+    ReplCommandList commands;
     commands.emplace(
         exit, [&exit, &executedCommands](std::string&) { executedCommands.push_back(exit); });
     commands.emplace(

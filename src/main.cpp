@@ -35,10 +35,11 @@ public:
 
         bp.setBeat(beatData);
         bp.setAccentuatedBeat(accentuatedBeat);
-        bp.setAccentuatedPattern(vector<bool>{true, false, false, false});
+        bp.setAccentuatedPattern(vector<BeatPattern::BeatType>{
+            BeatPattern::accent, BeatPattern::beat, BeatPattern::beat, BeatPattern::beat});
 
         // set commands for the repl
-        commandlist_t commands;
+        ReplCommandList commands;
         // make ENTER start and stop
         commands.emplace("", [this](string&) {
             if (bp.isRunning()) {
@@ -49,6 +50,7 @@ public:
             }
         });
         commands.emplace("exit", [this](string&) { this->repl.stop(); });
+        commands.emplace("quit", [this](string&) { this->repl.stop(); });
         commands.emplace("start", [this](string&) { this->bp.start(); });
         commands.emplace("stop", [this](string&) { this->bp.stop(); });
         commands.emplace("bpm", [this](string& s) {
@@ -57,17 +59,13 @@ public:
         });
         commands.emplace("pattern", [this](string& s) {
             if ((s.find('*') == string::npos) && (s.find('+') == string::npos)) {
+                cout << "Command usage: pattern <pattern>" << endl;
+                cout << "  <pattern> must be in the form of `[!|+|.]*`" << endl;
+                cout << "  `!` = accentuated beat  `+` = normal beat  `.` = pause" << endl;
                 return;
             }
-            vector<bool> pattern;
-            for (char c : s) {
-                if (c == '*') {
-                    pattern.push_back(true);
-                }
-                else if (c == '+') {
-                    pattern.push_back(false);
-                }
-            }
+            BeatPattern pattern{};
+            pattern.fromString(s);
             this->bp.setAccentuatedPattern(pattern);
         });
 

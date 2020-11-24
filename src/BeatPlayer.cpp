@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <iostream>
 #include <mutex>
+#include <sstream>
 #include <vector>
 
 
@@ -173,31 +174,32 @@ void BeatPlayer::start()
 
     playBackBuffer.clear();
 
-    auto beatIntervalSamples  = static_cast<size_t>(floor(1.0 / (beatRate / 60.0) * PLAYBACK_RATE));
+    const auto beatIntervalSamples =
+        static_cast<size_t>(floor(1.0 / (beatRate / 60.0) * PLAYBACK_RATE));
     auto localBeat            = beat;
     auto localAccentuatedBeat = accentuatedBeat;
+    decltype(localBeat) pause;
 
-    bool hasAccent =
-        end(accentuatedPattern) != find(begin(accentuatedPattern), end(accentuatedPattern), true);
+    const auto& pattern = beatPattern.getBeatPattern();
 
     if (localBeat.empty()) {
         cout << "Warning: the beat is silence, you will not hear anything." << endl;
     }
-    if (localAccentuatedBeat.empty() && hasAccent) {
-        localAccentuatedBeat = localBeat;
+    if (pattern.empty()) {
+        cout << "Not playing, beat pattern is empty" << endl;
+        return;
     }
-
-    double lengthS = getDuration(beat.size());
+    const double lengthS = getDuration(beat.size());
 
     // Fade the beat in and out to avoid click/pop noises because of too sudden output value
     // changes
-    auto rampingSteps = (lengthS * FADE_MIN_PERCENTAGE < FADE_MIN_TIME)
-                            ? getNumbersOfSamples(lengthS * FADE_MIN_PERCENTAGE)
-                            : getNumbersOfSamples(FADE_MIN_TIME);
+    const auto rampingSteps = (lengthS * FADE_MIN_PERCENTAGE < FADE_MIN_TIME)
+                                  ? getNumbersOfSamples(lengthS * FADE_MIN_PERCENTAGE)
+                                  : getNumbersOfSamples(FADE_MIN_TIME);
 
     // Since fadeInOut only uses the first x and last y samples,
     // make sure not to fade out zero values
-    auto adjustBuffer = [=](vector<TBeatDataType>& buffer) {
+    auto adjustBuffer = [&beatIntervalSamples, &rampingSteps](vector<TBeatDataType>& buffer) {
         if (buffer.size() > beatIntervalSamples) {
             buffer.resize(beatIntervalSamples, 0);
             fadeInOut(buffer, rampingSteps, rampingSteps);
@@ -208,32 +210,36 @@ void BeatPlayer::start()
         }
     };
 
+    // prepare the sounds for each beat pattern type
     adjustBuffer(localBeat);
-    if (hasAccent) {
-        adjustBuffer(localAccentuatedBeat);
-
-        // fill the playback buffer according to the pattern
-        auto playBackBufferIterator = back_inserter(playBackBuffer);
-        for (bool accent : accentuatedPattern) {
-            if (accent) {
-                playBackBufferIterator = copy(begin(localAccentuatedBeat),
-                                              end(localAccentuatedBeat), playBackBufferIterator);
-            }
-            else {
-                playBackBufferIterator =
-                    copy(begin(localBeat), end(localBeat), playBackBufferIterator);
-            }
-        }
+    if (localAccentuatedBeat.empty()) {
+        localAccentuatedBeat = localBeat;
     }
     else {
-        playBackBuffer = localBeat;
+        adjustBuffer(localAccentuatedBeat);
+    }
+    pause.clear();
+    pause.resize(beatIntervalSamples, 0);
+
+
+    // fill the playback buffer according to the pattern
+    auto playBackBufferIterator = back_inserter(playBackBuffer);
+    for (const auto& beatType : pattern) {
+        switch (beatType) {
+        case BeatPattern::accent:
+            playBackBufferIterator = copy(begin(localAccentuatedBeat), end(localAccentuatedBeat),
+                                          playBackBufferIterator);
+            break;
+        case BeatPattern::beat:
+            playBackBufferIterator = copy(begin(localBeat), end(localBeat), playBackBufferIterator);
+            break;
+        case BeatPattern::pause:
+            playBackBufferIterator = copy(begin(pause), end(pause), playBackBufferIterator);
+            break;
+        }
     }
 
-    string pattern;
-    for (auto accent : accentuatedPattern) {
-        pattern += (accent) ? "*" : "+";
-    }
-    cout << "Playing " << pattern << " at " << beatRate << " bpm" << endl;
+    cout << "Playing " << beatPattern.toString() << " at " << beatRate << " bpm" << endl;
 
     startAudio();
 }
@@ -297,6 +303,7 @@ void BeatPlayer::stop()
 {
     lock_guard<recursive_mutex> lg(setterMutex);
     if (isRunning()) {
+        cout << "Stopping playback" << endl;
         ma_device_uninit(&device);
         ma_audio_buffer_uninit(&buf);
         ma_context_uninit(&context);
@@ -351,15 +358,58 @@ void BeatPlayer::setDataAndBPM(const vector<TBeatDataType>& beatData, size_t bpm
     restart();
 }
 
-void BeatPlayer::setAccentuatedPattern(const vector<bool>& pattern)
+void BeatPlayer::setAccentuatedPattern(const BeatPattern& pattern)
 {
     {
         lock_guard<recursive_mutex> guard(setterMutex);
-        accentuatedPattern = pattern;
+        beatPattern = pattern;
     }
     restart();
 }
 
 bool BeatPlayer::isRunning() const { return running; }
+
+
+BeatPattern::BeatPattern(const std::string& pattern) { fromString(pattern); }
+BeatPattern::BeatPattern(const std::vector<mnome::BeatPattern::BeatType>& pattern)
+{
+    this->pattern = pattern;
+}
+
+void BeatPattern::fromString(const std::string& strPattern)
+{
+    pattern.clear();
+    for (const char& character : strPattern) {
+        const auto convertedType = static_cast<BeatPattern::BeatType>(character);
+
+        // the following switch will ignore all non valid conversions of character to
+        // BeatPattern::BeatType
+        switch (convertedType) {
+        case BeatType::accent:
+            pattern.push_back(BeatType::accent);
+            break;
+        case BeatType::beat:
+            pattern.push_back(BeatType::beat);
+            break;
+        case BeatType::pause:
+            pattern.push_back(BeatType::pause);
+            break;
+        }
+    }
+}
+
+std::string BeatPattern::toString() const
+{
+    std::stringstream ss;
+    for (auto& type : pattern) {
+        ss << static_cast<char>(type);
+    }
+    return ss.str();
+}
+
+const std::vector<mnome::BeatPattern::BeatType>& BeatPattern::getBeatPattern() const
+{
+    return pattern;
+}
 
 }  // namespace mnome

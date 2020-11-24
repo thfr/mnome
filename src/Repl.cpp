@@ -4,6 +4,8 @@
 
 #include "Repl.hpp"
 
+using namespace std;
+
 namespace mnome {
 
 /// Trim first spaces of a string
@@ -33,7 +35,7 @@ Repl::Repl() : inputStream{std::cin}, outputStream{std::cout}, myThread{nullptr}
 {
 }
 
-Repl::Repl(commandlist_t& cmds, std::istream& is, std::ostream& os)
+Repl::Repl(ReplCommandList& cmds, std::istream& is, std::ostream& os)
     : commands{cmds}, inputStream{is}, outputStream{os}, myThread{nullptr}, requestStop{false}
 {
 }
@@ -44,7 +46,7 @@ Repl::~Repl()
     waitForStop();
 }
 
-void Repl::setCommands(const commandlist_t& cmds) { commands = cmds; }
+void Repl::setCommands(const ReplCommandList& cmds) { commands = cmds; }
 
 void Repl::start()
 {
