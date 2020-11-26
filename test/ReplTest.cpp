@@ -30,7 +30,7 @@ TEST(ReplTest, 1)
     dut.start();
     is << "exit\nstart\n";
     is.sync();
-    usleep(5'000);
+    this_thread::sleep_for(chrono::milliseconds(5));
     dut.stop();
     dut.waitForStop();
     EXPECT_EQ(executedCommands[0], exit);

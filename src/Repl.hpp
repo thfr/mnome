@@ -52,7 +52,7 @@ public:
 
     /// Make sure the thread has stopped
     /// \note blocks until thread is finished
-    void waitForStop() const;
+    void waitForStop();
 
 private:
     /// The method that the thread runs

@@ -26,11 +26,6 @@ static inline void rtrim(std::string& s)
 }
 
 
-class ForbiddenCommandExecption : exception
-{
-};
-
-
 Repl::Repl() : inputStream{std::cin}, outputStream{std::cout}, myThread{nullptr}, requestStop{false}
 {
 }
@@ -46,7 +41,10 @@ Repl::~Repl()
     waitForStop();
 }
 
-void Repl::setCommands(const ReplCommandList& cmds) { commands = cmds; }
+void Repl::setCommands(const ReplCommandList& cmds)
+{
+    commands = cmds;
+}
 
 void Repl::start()
 {
@@ -61,9 +59,12 @@ void Repl::stop()
     }
 }
 
-bool Repl::isRunning() const { return myThread && myThread->joinable(); }
+bool Repl::isRunning() const
+{
+    return myThread && myThread->joinable();
+}
 
-void Repl::waitForStop() const
+void Repl::waitForStop()
 {
     if (isRunning()) {
         myThread->join();

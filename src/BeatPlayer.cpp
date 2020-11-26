@@ -127,13 +127,19 @@ void fadeInOut(vector<TSample>& data, size_t fadeInSamples, size_t fadeOutSample
 
 /// Return the time it takes to playback a number of samples
 /// \param[in]  samples  number of samples
-double getDuration(size_t samples) { return static_cast<double>(samples) / PLAYBACK_RATE; }
+double getDuration(size_t samples)
+{
+    return static_cast<double>(samples) / PLAYBACK_RATE;
+}
 
 
 /// Return the time it takes to playback a number of samples
 /// \param[in]  time  time in seconds
 /// \return     samples  number of samples that resemble \p time samples
-size_t getNumbersOfSamples(double time) { return static_cast<size_t>(round(time * PLAYBACK_RATE)); }
+size_t getNumbersOfSamples(double time)
+{
+    return static_cast<size_t>(round(time * PLAYBACK_RATE));
+}
 
 
 vector<int16_t> generateTone(const double freq, const double lengthS, const size_t addHarmonics)
@@ -159,9 +165,14 @@ vector<int16_t> generateTone(const double freq, const double lengthS, const size
 }
 
 
-BeatPlayer::BeatPlayer(const size_t brate) : beatRate(brate) {}
+BeatPlayer::BeatPlayer(const size_t brate) : beatRate(brate)
+{
+}
 
-BeatPlayer::~BeatPlayer() { stop(); }
+BeatPlayer::~BeatPlayer()
+{
+    stop();
+}
 
 
 void BeatPlayer::start()
@@ -313,6 +324,7 @@ void BeatPlayer::stop()
 
 void BeatPlayer::restart()
 {
+    lock_guard<recursive_mutex> guard(setterMutex);
     if (isRunning()) {
         stop();
         start();
@@ -321,59 +333,59 @@ void BeatPlayer::restart()
 
 void BeatPlayer::setBPM(size_t bpm)
 {
-    {
-        lock_guard<recursive_mutex> guard(setterMutex);
-        beatRate = bpm;
-    }
+    lock_guard<recursive_mutex> guard(setterMutex);
+    beatRate = bpm;
     restart();
 }
 
-size_t BeatPlayer::getBPM() const { return beatRate; }
+size_t BeatPlayer::getBPM() const
+{
+    return beatRate;
+}
 
 void BeatPlayer::setAccentuatedBeat(const vector<TBeatDataType>& newBeat)
 {
-    {
-        lock_guard<recursive_mutex> guard(setterMutex);
-        accentuatedBeat = newBeat;
-    }
+    lock_guard<recursive_mutex> guard(setterMutex);
+    accentuatedBeat = newBeat;
     restart();
 }
 
 void BeatPlayer::setBeat(const vector<TBeatDataType>& newBeat)
 {
-    {
-        lock_guard<recursive_mutex> guard(setterMutex);
-        beat = newBeat;
-    }
+    lock_guard<recursive_mutex> guard(setterMutex);
+    beat = newBeat;
     restart();
 }
 
 void BeatPlayer::setDataAndBPM(const vector<TBeatDataType>& beatData, size_t bpm)
 {
-    {
-        lock_guard<recursive_mutex> guard(setterMutex);
-        beat     = beatData;
-        beatRate = bpm;
-    }
+    lock_guard<recursive_mutex> guard(setterMutex);
+    beat     = beatData;
+    beatRate = bpm;
     restart();
 }
 
 void BeatPlayer::setAccentuatedPattern(const BeatPattern& pattern)
 {
-    {
-        lock_guard<recursive_mutex> guard(setterMutex);
-        beatPattern = pattern;
-    }
+    lock_guard<recursive_mutex> guard(setterMutex);
+    beatPattern = pattern;
     restart();
 }
 
-bool BeatPlayer::isRunning() const { return running; }
-
-
-BeatPattern::BeatPattern(const std::string& pattern) { fromString(pattern); }
-BeatPattern::BeatPattern(const std::vector<mnome::BeatPattern::BeatType>& pattern)
+bool BeatPlayer::isRunning() const
 {
-    this->pattern = pattern;
+    return running;
+}
+
+
+
+BeatPattern::BeatPattern(const std::string& strPattern)
+{
+    fromString(strPattern);
+}
+BeatPattern::BeatPattern(const std::vector<mnome::BeatPattern::BeatType>& otherPattern)
+{
+    pattern = otherPattern;
 }
 
 void BeatPattern::fromString(const std::string& strPattern)

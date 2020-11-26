@@ -36,8 +36,8 @@ private:
 
 public:
     BeatPattern() = default;
-    BeatPattern(const std::string& pattern);
-    BeatPattern(const std::vector<mnome::BeatPattern::BeatType>& pattern);
+    BeatPattern(const std::string& strPattern);
+    BeatPattern(const std::vector<mnome::BeatPattern::BeatType>& otherPattern);
 
     void fromString(const std::string& strPattern);
     std::string toString() const;
