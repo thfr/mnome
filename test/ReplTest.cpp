@@ -1,4 +1,5 @@
 
+#include <Mnome.hpp>
 #include <Repl.hpp>
 
 #include <gtest/gtest.h>
@@ -9,6 +10,22 @@
 using namespace std;
 
 namespace mnome {
+
+TEST(MnomeTest, 1)
+{
+    Mnome app{};
+    EXPECT_NO_THROW(app.startPlayback());
+    EXPECT_TRUE(app.isPlaying());
+    this_thread::sleep_for(std::chrono::seconds(1));
+    EXPECT_NO_THROW(app.stopPlayback());
+    EXPECT_NO_THROW(app.startPlayback());
+    this_thread::sleep_for(std::chrono::seconds(1));
+    EXPECT_NO_THROW(app.setBeatPattern("!+.+"));
+    this_thread::sleep_for(std::chrono::seconds(1));
+    EXPECT_TRUE(app.isPlaying());
+    EXPECT_NO_THROW(app.stop());
+    this_thread::sleep_for(std::chrono::seconds(1));
+}
 
 TEST(ReplTest, 1)
 {

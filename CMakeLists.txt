@@ -11,7 +11,13 @@ endif(NOT MSVC)
 
 add_subdirectory(cmake/miniaudio)
 
-set(SOURCE_FILES ./src/BeatPlayer.cpp ./src/BeatPlayer.hpp ./src/Repl.cpp ./src/Repl.hpp)
+set(SOURCE_FILES 
+    ./src/BeatPlayer.cpp 
+    ./src/BeatPlayer.hpp 
+    ./src/Mnome.cpp 
+    ./src/Mnome.hpp 
+    ./src/Repl.cpp 
+    ./src/Repl.hpp)
 
 # testable library
 add_library(mnomelib STATIC ${SOURCE_FILES})

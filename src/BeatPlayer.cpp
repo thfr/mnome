@@ -127,13 +127,19 @@ void fadeInOut(vector<TSample>& data, size_t fadeInSamples, size_t fadeOutSample
 
 /// Return the time it takes to playback a number of samples
 /// \param[in]  samples  number of samples
-double getDuration(size_t samples) { return static_cast<double>(samples) / PLAYBACK_RATE; }
+double getDuration(size_t samples)
+{
+    return static_cast<double>(samples) / PLAYBACK_RATE;
+}
 
 
 /// Return the time it takes to playback a number of samples
 /// \param[in]  time  time in seconds
 /// \return     samples  number of samples that resemble \p time samples
-size_t getNumbersOfSamples(double time) { return static_cast<size_t>(round(time * PLAYBACK_RATE)); }
+size_t getNumbersOfSamples(double time)
+{
+    return static_cast<size_t>(round(time * PLAYBACK_RATE));
+}
 
 
 vector<int16_t> generateTone(const double freq, const double lengthS, const size_t addHarmonics)
@@ -159,9 +165,14 @@ vector<int16_t> generateTone(const double freq, const double lengthS, const size
 }
 
 
-BeatPlayer::BeatPlayer(const size_t brate) : beatRate(brate) {}
+BeatPlayer::BeatPlayer(const size_t brate) : beatRate(brate)
+{
+}
 
-BeatPlayer::~BeatPlayer() { stop(); }
+BeatPlayer::~BeatPlayer()
+{
+    stop();
+}
 
 
 void BeatPlayer::start()
@@ -328,7 +339,10 @@ void BeatPlayer::setBPM(size_t bpm)
     restart();
 }
 
-size_t BeatPlayer::getBPM() const { return beatRate; }
+size_t BeatPlayer::getBPM() const
+{
+    return beatRate;
+}
 
 void BeatPlayer::setAccentuatedBeat(const vector<TBeatDataType>& newBeat)
 {
@@ -367,10 +381,16 @@ void BeatPlayer::setAccentuatedPattern(const BeatPattern& pattern)
     restart();
 }
 
-bool BeatPlayer::isRunning() const { return running; }
+bool BeatPlayer::isRunning() const
+{
+    return running;
+}
 
 
-BeatPattern::BeatPattern(const std::string& pattern) { fromString(pattern); }
+BeatPattern::BeatPattern(const std::string& pattern)
+{
+    fromString(pattern);
+}
 BeatPattern::BeatPattern(const std::vector<mnome::BeatPattern::BeatType>& pattern)
 {
     this->pattern = pattern;

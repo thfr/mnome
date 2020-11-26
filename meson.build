@@ -10,9 +10,10 @@ mnome_lib = static_library('libmnome',
   'src/BeatPlayer.hpp',
   'src/Repl.cpp',
   'src/Repl.hpp',
+  'src/Mnome.cpp',
+  'src/Mnome.hpp',
   dependencies: [miniaudio_dep],
   implicit_include_directories: true,
-  implib: true,
   )
 
 threads_dep = dependency('threads')
@@ -30,7 +31,7 @@ gtest_dep = gtest.get_variable('gtest_main_dep')
 testapp = executable(
   'ReplTest',
   files(['./test/ReplTest.cpp']),
-  dependencies : [gtest_dep],
+  dependencies : [gtest_dep, miniaudio_dep],
   link_with: mnome_lib,
   include_directories: './src/',
   )
