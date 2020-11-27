@@ -1,3 +1,4 @@
+/// Mnome main application
 #ifndef MNOME_H
 #define MNOME_H
 
@@ -9,6 +10,7 @@
 
 namespace mnome {
 
+/// Mnome main application class
 class Mnome
 {
     BeatPlayer bp;

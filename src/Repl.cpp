@@ -26,11 +26,6 @@ static inline void rtrim(std::string& s)
 }
 
 
-class ForbiddenCommandExecption : exception
-{
-};
-
-
 Repl::Repl() : inputStream{std::cin}, outputStream{std::cout}, myThread{nullptr}, requestStop{false}
 {
 }

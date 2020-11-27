@@ -6,18 +6,15 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 set(CMAKE_CXX_STANDARD 17)
 if(NOT MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wshadow -Werror -Wall -Wextra -pedantic")
-    set(CMAKE_CXX_CLANG_TIDY clang-tidy -checks=-*,readability-*)
+else(NOT MSVC)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MT")
 endif(NOT MSVC)
 
 add_subdirectory(cmake/miniaudio)
 
-set(SOURCE_FILES 
-    ./src/BeatPlayer.cpp 
-    ./src/BeatPlayer.hpp 
-    ./src/Mnome.cpp 
-    ./src/Mnome.hpp 
-    ./src/Repl.cpp 
-    ./src/Repl.hpp)
+set(SOURCE_FILES ./src/BeatPlayer.cpp ./src/BeatPlayer.hpp ./src/Mnome.cpp ./src/Mnome.hpp ./src/Repl.cpp
+                 ./src/Repl.hpp
+)
 
 # testable library
 add_library(mnomelib STATIC ${SOURCE_FILES})
@@ -34,3 +31,8 @@ add_executable(ReplTest ./test/ReplTest.cpp)
 target_link_libraries(ReplTest gtest gtest_main mnomelib)
 target_include_directories(ReplTest PRIVATE ./src/)
 add_test(NAME ReplTest COMMAND ReplTest)
+
+add_executable(MnomeTest ./test/MnomeTest.cpp)
+target_link_libraries(MnomeTest gtest gtest_main mnomelib)
+target_include_directories(MnomeTest PRIVATE ./src/)
+add_test(NAME MnomeTest COMMAND MnomeTest)

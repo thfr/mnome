@@ -324,6 +324,7 @@ void BeatPlayer::stop()
 
 void BeatPlayer::restart()
 {
+    lock_guard<recursive_mutex> guard(setterMutex);
     if (isRunning()) {
         stop();
         start();
@@ -332,10 +333,8 @@ void BeatPlayer::restart()
 
 void BeatPlayer::setBPM(size_t bpm)
 {
-    {
-        lock_guard<recursive_mutex> guard(setterMutex);
-        beatRate = bpm;
-    }
+    lock_guard<recursive_mutex> guard(setterMutex);
+    beatRate = bpm;
     restart();
 }
 
@@ -346,38 +345,30 @@ size_t BeatPlayer::getBPM() const
 
 void BeatPlayer::setAccentuatedBeat(const vector<TBeatDataType>& newBeat)
 {
-    {
-        lock_guard<recursive_mutex> guard(setterMutex);
-        accentuatedBeat = newBeat;
-    }
+    lock_guard<recursive_mutex> guard(setterMutex);
+    accentuatedBeat = newBeat;
     restart();
 }
 
 void BeatPlayer::setBeat(const vector<TBeatDataType>& newBeat)
 {
-    {
-        lock_guard<recursive_mutex> guard(setterMutex);
-        beat = newBeat;
-    }
+    lock_guard<recursive_mutex> guard(setterMutex);
+    beat = newBeat;
     restart();
 }
 
 void BeatPlayer::setDataAndBPM(const vector<TBeatDataType>& beatData, size_t bpm)
 {
-    {
-        lock_guard<recursive_mutex> guard(setterMutex);
-        beat     = beatData;
-        beatRate = bpm;
-    }
+    lock_guard<recursive_mutex> guard(setterMutex);
+    beat     = beatData;
+    beatRate = bpm;
     restart();
 }
 
 void BeatPlayer::setAccentuatedPattern(const BeatPattern& pattern)
 {
-    {
-        lock_guard<recursive_mutex> guard(setterMutex);
-        beatPattern = pattern;
-    }
+    lock_guard<recursive_mutex> guard(setterMutex);
+    beatPattern = pattern;
     restart();
 }
 
@@ -387,13 +378,14 @@ bool BeatPlayer::isRunning() const
 }
 
 
-BeatPattern::BeatPattern(const std::string& pattern)
+
+BeatPattern::BeatPattern(const std::string& strPattern)
 {
-    fromString(pattern);
+    fromString(strPattern);
 }
-BeatPattern::BeatPattern(const std::vector<mnome::BeatPattern::BeatType>& pattern)
+BeatPattern::BeatPattern(const std::vector<mnome::BeatPattern::BeatType>& otherPattern)
 {
-    this->pattern = pattern;
+    pattern = otherPattern;
 }
 
 void BeatPattern::fromString(const std::string& strPattern)
