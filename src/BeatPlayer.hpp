@@ -126,8 +126,7 @@ private:
 /// \param[in]   lengthS    length in seconds
 /// \param[in]   harmonics  number of harmonics to add to the tone
 /// \return      data       samples to be generated
-std::vector<int16_t> generateTone(const double freq, const double lengthS,
-                                  const size_t addHarmonics);
+std::vector<int16_t> generateTone(const double freq, const double lengthS, const size_t addHarmonics);
 
 }  // namespace mnome
 

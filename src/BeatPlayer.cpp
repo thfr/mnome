@@ -185,10 +185,9 @@ void BeatPlayer::start()
 
     playBackBuffer.clear();
 
-    const auto beatIntervalSamples =
-        static_cast<size_t>(floor(1.0 / (beatRate / 60.0) * PLAYBACK_RATE));
-    auto localBeat            = beat;
-    auto localAccentuatedBeat = accentuatedBeat;
+    const auto beatIntervalSamples = static_cast<size_t>(floor(1.0 / (beatRate / 60.0) * PLAYBACK_RATE));
+    auto localBeat                 = beat;
+    auto localAccentuatedBeat      = accentuatedBeat;
     decltype(localBeat) pause;
 
     const auto& pattern = beatPattern.getBeatPattern();
@@ -238,8 +237,8 @@ void BeatPlayer::start()
     for (const auto& beatType : pattern) {
         switch (beatType) {
         case BeatPattern::accent:
-            playBackBufferIterator = copy(begin(localAccentuatedBeat), end(localAccentuatedBeat),
-                                          playBackBufferIterator);
+            playBackBufferIterator =
+                copy(begin(localAccentuatedBeat), end(localAccentuatedBeat), playBackBufferIterator);
             break;
         case BeatPattern::beat:
             playBackBufferIterator = copy(begin(localBeat), end(localBeat), playBackBufferIterator);
@@ -256,8 +255,7 @@ void BeatPlayer::start()
 }
 
 
-void miniaudio_data_callback(ma_device* pDevice, void* pOutput, const void* pInput,
-                             ma_uint32 frameCount)
+void miniaudio_data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount)
 {
     ma_audio_buffer* buffer = (ma_audio_buffer*)pDevice->pUserData;
     if (buffer == nullptr) {
@@ -282,8 +280,7 @@ void BeatPlayer::startAudio()
     result = ma_context_init(nullptr, 0, nullptr, &context);
 
     // put the playback buffer inside the ma_audio_buffer structure
-    buf_config = ma_audio_buffer_config_init(ma_format_s16, 1, playBackBuffer.size(),
-                                             playBackBuffer.data(), nullptr);
+    buf_config = ma_audio_buffer_config_init(ma_format_s16, 1, playBackBuffer.size(), playBackBuffer.data(), nullptr);
     result     = ma_audio_buffer_init(&buf_config, &buf);
     if (result != MA_SUCCESS) {
         cout << "Audio buffer initialization failed, aborting\n";
@@ -376,7 +373,6 @@ bool BeatPlayer::isRunning() const
 {
     return running;
 }
-
 
 
 BeatPattern::BeatPattern(const std::string& strPattern)

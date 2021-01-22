@@ -19,8 +19,8 @@ Mnome::Mnome() : bp{80}
 
     bp.setBeat(beatData);
     bp.setAccentuatedBeat(accentuatedBeat);
-    bp.setAccentuatedPattern(vector<BeatPattern::BeatType>{BeatPattern::accent, BeatPattern::beat,
-                                                           BeatPattern::beat, BeatPattern::beat});
+    bp.setAccentuatedPattern(
+        vector<BeatPattern::BeatType>{BeatPattern::accent, BeatPattern::beat, BeatPattern::beat, BeatPattern::beat});
 
     // set commands for the repl
     ReplCommandList commands;

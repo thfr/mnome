@@ -12,8 +12,7 @@ namespace mnome {
 /// \note see https://stackoverflow.com/a/217605
 static inline std::string& ltrim(std::string& s)
 {
-    s.erase(s.begin(),
-            std::find_if(s.begin(), s.end(), [](int c) { return 0 == std::isspace(c); }));
+    s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](int c) { return 0 == std::isspace(c); }));
     return s;
 }
 
@@ -21,8 +20,7 @@ static inline std::string& ltrim(std::string& s)
 /// \note see https://stackoverflow.com/a/217605
 static inline void rtrim(std::string& s)
 {
-    s.erase(std::find_if(s.rbegin(), s.rend(), [](int ch) { return 0 == std::isspace(ch); }).base(),
-            s.end());
+    s.erase(std::find_if(s.rbegin(), s.rend(), [](int ch) { return 0 == std::isspace(ch); }).base(), s.end());
 }
 
 
@@ -100,8 +98,7 @@ void Repl::run()
 
         try {
             // execute command with parameters
-            string args =
-                (cmdSep != string::npos) ? input.substr(cmdSep + 1, string::npos) : string{};
+            string args = (cmdSep != string::npos) ? input.substr(cmdSep + 1, string::npos) : string{};
             possibleCommand->second(args);
         }
         catch (const std::exception& e) {  // reference to the base of a polymorphic object
