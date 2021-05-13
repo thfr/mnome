@@ -10,6 +10,8 @@ else(NOT MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MT")
 endif(NOT MSVC)
 
+set(CMAKE_CXX_CLANG_TIDY clang-tidy -checks=-*,readability-*)
+
 add_subdirectory(cmake/miniaudio)
 
 set(SOURCE_FILES ./src/BeatPlayer.cpp ./src/BeatPlayer.hpp ./src/Mnome.cpp ./src/Mnome.hpp ./src/Repl.cpp

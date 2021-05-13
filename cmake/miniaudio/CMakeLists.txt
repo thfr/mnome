@@ -4,8 +4,8 @@ project(Mnome-Miniaudio)
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
 include(FetchContent)
-FetchContent_Declare(miniaudio # version 0.10.31
-                     URL "https://github.com/mackron/miniaudio/archive/53512c39b79ee284058e139604f358fd8a3489cd.zip")
+FetchContent_Declare(miniaudio # version 0.10.35
+                     URL "https://github.com/mackron/miniaudio/archive/199d6a7875b4288af6a7b615367c8fdc2019b03c.zip")
 FetchContent_GetProperties(miniaudio)
 if(NOT miniaudio_POPULATED)
     FetchContent_Populate(miniaudio)
