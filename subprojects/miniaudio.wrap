@@ -1,6 +1,6 @@
 [wrap-git]
 url = https://github.com/mackron/miniaudio.git
-# version 0.10.35
-revision = 199d6a7875b4288af6a7b615367c8fdc2019b03c
+# version 0.11.9
+revision = 4d813cfe23c28db165cce6785419fee9d2399766
 
 patch_directory = miniaudio

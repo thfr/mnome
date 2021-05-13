@@ -1,10 +1,15 @@
 #include "Mnome.hpp"
+#include "AudioSignal.hpp"
+#include "src/BeatPlayer.hpp"
 
 #include <cmath>
+#include <cstddef>
 
 using namespace std;
 
 namespace mnome {
+
+constexpr size_t PLAYBACK_RATE = 48'000;  // [Hz]
 
 Mnome::Mnome() : bp{80}
 {
@@ -13,14 +18,17 @@ Mnome::Mnome() : bp{80}
     };
     double normalBeatHz      = halfToneOffset(440, 2);           // base tone = B
     double accentuatedBeatHz = halfToneOffset(normalBeatHz, 7);  // base tone + quint
+    uint8_t overtones        = 4;
     // generate the beat
-    vector<TBeatDataType> beatData{generateTone(normalBeatHz, 0.0750, 4)};
-    vector<TBeatDataType> accentuatedBeat{generateTone(accentuatedBeatHz, 0.0750, 4)};
+    AudioSignalConfiguration audioConfig{PLAYBACK_RATE, 1};
+    ToneConfiguration toneConfigNormal{0.0750, normalBeatHz, overtones};
+    ToneConfiguration toneConfigAccentuated{0.0750, accentuatedBeatHz, overtones};
+    auto accentuatedBeat = generateTone(audioConfig, toneConfigAccentuated);
+    auto normalBeat      = generateTone(audioConfig, toneConfigNormal);
 
-    bp.setBeat(beatData);
+    bp.setBeat(normalBeat);
     bp.setAccentuatedBeat(accentuatedBeat);
-    bp.setAccentuatedPattern(
-        vector<BeatPattern::BeatType>{BeatPattern::accent, BeatPattern::beat, BeatPattern::beat, BeatPattern::beat});
+    bp.setAccentuatedPattern(MetronomeBeats("!+++"));
 
     // set commands for the repl
     ReplCommandList commands;
@@ -90,9 +98,7 @@ void Mnome::setBeatPattern(const string& patternStr)
         cout << "  `!` = accentuated beat  `+` = normal beat  `.` = pause" << endl;
         return;
     }
-    BeatPattern pattern{};
-    pattern.fromString(patternStr);
-    bp.setAccentuatedPattern(pattern);
+    bp.setAccentuatedPattern(MetronomeBeats(patternStr));
 }
 
 bool Mnome::isPlaying() const

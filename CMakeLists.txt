@@ -15,8 +15,8 @@ set(CMAKE_CXX_CLANG_TIDY clang-tidy -checks=-*,readability-*)
 add_subdirectory(cmake/miniaudio)
 
 set(SOURCE_FILES ./src/BeatPlayer.cpp ./src/BeatPlayer.hpp ./src/Mnome.cpp ./src/Mnome.hpp ./src/Repl.cpp
-                 ./src/Repl.hpp
-)
+    ./src/Repl.hpp ./src/AudioSignal.hpp ./src/AudioSignal.cpp
+    )
 
 # testable library
 add_library(mnomelib STATIC ${SOURCE_FILES})
@@ -26,7 +26,7 @@ add_executable(mnome ./src/main.cpp)
 target_link_libraries(mnome mnomelib)
 
 enable_testing()
-FetchContent_Declare(googletest URL https://github.com/google/googletest/archive/release-1.10.0.tar.gz)
+FetchContent_Declare(googletest URL https://github.com/google/googletest/archive/release-1.11.0.tar.gz)
 FetchContent_MakeAvailable(googletest)
 
 add_executable(ReplTest ./test/ReplTest.cpp)

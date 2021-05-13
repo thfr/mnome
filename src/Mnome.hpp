@@ -10,6 +10,8 @@
 
 namespace mnome {
 
+extern const size_t PLAYBACK_RATE;
+
 /// Mnome main application class
 class Mnome
 {

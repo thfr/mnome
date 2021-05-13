@@ -1,11 +1,13 @@
 project('mnome', 'cpp',
   version : '0.1',
-  default_options : ['warning_level=3', 'werror=true', 'wall=true', 'cpp_std=c++17'])
+  default_options : ['warning_level=3', 'werror=true', 'cpp_std=c++17'])
 
 miniaudio = subproject('miniaudio')
 miniaudio_dep = miniaudio.get_variable('miniaudio_dep')
 
 mnome_lib = static_library('libmnome',
+  'src/AudioSignal.cpp',
+  'src/AudioSignal.hpp',
   'src/BeatPlayer.cpp',
   'src/BeatPlayer.hpp',
   'src/Repl.cpp',
@@ -48,3 +50,12 @@ mnome_test = executable(
 
 test('MnomeTest', mnome_test)
 
+audiosignal_test = executable(
+  'AudioSignalTest',
+  files(['./test/AudioSignalTest.cpp']),
+  dependencies : [gtest_dep],
+  link_with: mnome_lib,
+  include_directories: './src/',
+  )
+
+test('AudioSignalTest', audiosignal_test)

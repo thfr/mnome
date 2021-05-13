@@ -9,8 +9,10 @@
 #include <cassert>
 #include <chrono>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <iostream>
+#include <memory>
 #include <mutex>
 #include <sstream>
 #include <vector>
@@ -27,102 +29,6 @@ constexpr double PI                      = 3.141592653589793;
 
 
 namespace mnome {
-
-
-// Generated with http://www-users.cs.york.ac.uk/~fisher/mkfilter/ - no license given -
-// and adjusted to work as a standalone function.
-void lowPass20KHz(vector<TBeatDataType>& signal)
-{
-    /* Digital filter designed by mkfilter/mkshape/gencode   A.J. Fisher
-     *    Command line: /www/usr/fisher/helpers/mkfilter -Bu -Lp -o 2 -a 4.1666666667e-01
-     * 0.0000000000e+00 -l */
-
-    constexpr size_t NZEROS = 2;
-    constexpr size_t NPOLES = 2;
-    constexpr double GAIN   = 1.450734152e+00;
-
-    double xv[NZEROS + 1]{};
-    double yv[NPOLES + 1]{};
-
-    for (auto& sample : signal) {
-        xv[0]  = xv[1];
-        xv[1]  = xv[2];
-        xv[2]  = sample / GAIN;
-        yv[0]  = yv[1];
-        yv[1]  = yv[2];
-        yv[2]  = (xv[0] + xv[2]) + 2 * xv[1] + (-0.4775922501 * yv[0]) + (-1.2796324250 * yv[1]);
-        sample = static_cast<TBeatDataType>(round(yv[2]));
-    }
-}
-
-// Generated with http://www-users.cs.york.ac.uk/~fisher/mkfilter/ - no license given -
-// and adjusted to work as a standalone function.
-void highPass20Hz(vector<TBeatDataType>& signal)
-{
-    /* Digital filter designed by mkfilter/mkshape/gencode   A.J. Fisher
-     *    Command line: /www/usr/fisher/helpers/mkfilter -Bu -Lp -o 2 -a 4.1666666667e-01
-     * 0.0000000000e+00 -l */
-
-    constexpr size_t NZEROS = 2;
-    constexpr size_t NPOLES = 2;
-    constexpr double GAIN   = 1.001852916e+00;
-
-    double xv[NZEROS + 1]{};
-    double yv[NPOLES + 1]{};
-
-    for (auto& sample : signal) {
-        xv[0]  = xv[1];
-        xv[1]  = xv[2];
-        xv[2]  = sample / GAIN;
-        yv[0]  = yv[1];
-        yv[1]  = yv[2];
-        yv[2]  = (xv[0] + xv[2]) - 2 * xv[1] + (-0.9963044430 * yv[0]) + (1.9962976018 * yv[1]);
-        sample = static_cast<TBeatDataType>(round(yv[2]));
-    }
-}
-
-/// Fade a signal in and out
-/// \tparam  T  datatype of the signal
-/// \param  data  signal to be faded
-/// \param  fadeInSamples  number of samples on which the fading in is done
-/// \param  fadeOutSamples  number of samples on which the fading out is done
-template <typename TSample>
-void fadeInOut(vector<TSample>& data, size_t fadeInSamples, size_t fadeOutSamples)
-{
-    // *Exponential Fading* is used because it is more pleasant to ear than linear fading.
-    //
-    // A factor with changing value is multiplied to each sample of the fading period.
-    // The factor must be increased by multiplying it with a constant ratio that. Therefore the
-    // factor must have a starting value > 0.0 .
-    //    fs * (r ** steps) = 1         (discrete form: f[n+1] = f[n] * r , while f[n+1] <= 1)
-    //    r ** steps  = 1 / fs
-    //    r = (1 / fs) ** (1 / steps)
-    //       where fs = factor at start
-    //              r = ratio
-
-    // apply all factors for the fade in
-    double startValue  = 1.0 / INT16_MAX;
-    double fadeInRatio = pow(1.0 / startValue, 1.0 / fadeInSamples);
-    double factor      = startValue;
-    for (size_t samIdx = 0; samIdx < fadeInSamples; ++samIdx) {
-        data[samIdx] *= factor;
-        factor *= fadeInRatio;
-    };
-
-    // apply all factors for the fade out
-    double fadeOutRatio = 1.0 / pow(1.0 / startValue, 1.0 / fadeOutSamples);
-    size_t fadeOutIndex = max(static_cast<size_t>(0), data.size() - fadeOutSamples);
-    factor              = fadeOutRatio;
-    for (size_t samIdx = fadeOutIndex; samIdx < data.size(); ++samIdx) {
-        data[samIdx] *= factor;
-        factor *= fadeOutRatio;
-    };
-
-    // filter output so that the signal stays inbetween 20 and 20000Hz
-    // this removes audible aliasing effects
-    lowPass20KHz(data);
-    highPass20Hz(data);
-}
 
 
 /// Return the time it takes to playback a number of samples
@@ -182,24 +88,27 @@ void BeatPlayer::start()
         cout << "Error: BeatPlayer is already running, but was started again" << endl;
         return;
     }
-
+    if (!beat || !accentuatedBeat) {
+        cout << "Error: No beat audio signal has been set" << endl;
+    }
+    auto localBeat            = AudioSignal(*beat);
+    auto localAccentuatedBeat = AudioSignal(*accentuatedBeat);
     playBackBuffer.clear();
 
-    const auto beatIntervalSamples = static_cast<size_t>(floor(1.0 / (beatRate / 60.0) * PLAYBACK_RATE));
-    auto localBeat                 = beat;
-    auto localAccentuatedBeat      = accentuatedBeat;
-    decltype(localBeat) pause;
+    const double beatIntervalLength  = static_cast<double>(beatRate / 60.0);
+    const size_t beatIntervalSamples = static_cast<size_t>(floor(1.0 / beatIntervalLength * PLAYBACK_RATE));
+    auto pause                       = AudioSignal(AudioSignalConfiguration{PLAYBACK_RATE, 1}, beatIntervalLength);
 
     const auto& pattern = beatPattern.getBeatPattern();
 
-    if (localBeat.empty()) {
+    if (0 == localBeat.numberSamples()) {
         cout << "Warning: the beat is silence, you will not hear anything." << endl;
     }
     if (pattern.empty()) {
         cout << "Not playing, beat pattern is empty" << endl;
         return;
     }
-    const double lengthS = getDuration(beat.size());
+    const double lengthS = localBeat.length();
 
     // Fade the beat in and out to avoid click/pop noises because of too sudden output value
     // changes
@@ -209,42 +118,41 @@ void BeatPlayer::start()
 
     // Since fadeInOut only uses the first x and last y samples,
     // make sure not to fade out zero values
-    auto adjustBuffer = [&beatIntervalSamples, &rampingSteps](vector<TBeatDataType>& buffer) {
-        if (buffer.size() > beatIntervalSamples) {
-            buffer.resize(beatIntervalSamples, 0);
-            fadeInOut(buffer, rampingSteps, rampingSteps);
+    auto adjustBuffer = [&beatIntervalSamples, &rampingSteps](AudioSignal& signal) {
+        if (signal.numberSamples() > beatIntervalSamples) {
+            signal.resizeSamples(beatIntervalSamples, 0);
+            signal.fadeInOut(rampingSteps, rampingSteps);
         }
         else {
-            fadeInOut(buffer, rampingSteps, rampingSteps);
-            buffer.resize(beatIntervalSamples, 0);
+            signal.fadeInOut(rampingSteps, rampingSteps);
+            signal.resizeSamples(beatIntervalSamples, 0);
         }
     };
 
     // prepare the sounds for each beat pattern type
     adjustBuffer(localBeat);
-    if (localAccentuatedBeat.empty()) {
-        localAccentuatedBeat = localBeat;
+    if (localAccentuatedBeat.numberSamples() == 0) {
+        localAccentuatedBeat = AudioSignal(static_cast<const AudioSignal&>(localBeat));
     }
     else {
         adjustBuffer(localAccentuatedBeat);
     }
-    pause.clear();
-    pause.resize(beatIntervalSamples, 0);
-
 
     // fill the playback buffer according to the pattern
     auto playBackBufferIterator = back_inserter(playBackBuffer);
     for (const auto& beatType : pattern) {
         switch (beatType) {
-        case BeatPattern::accent:
+        case BeatType::accent:
+            playBackBufferIterator = copy(begin(localAccentuatedBeat.getAudioData()),
+                                          end(localAccentuatedBeat.getAudioData()), playBackBufferIterator);
+            break;
+        case BeatType::beat:
             playBackBufferIterator =
-                copy(begin(localAccentuatedBeat), end(localAccentuatedBeat), playBackBufferIterator);
+                copy(begin(localBeat.getAudioData()), end(localBeat.getAudioData()), playBackBufferIterator);
             break;
-        case BeatPattern::beat:
-            playBackBufferIterator = copy(begin(localBeat), end(localBeat), playBackBufferIterator);
-            break;
-        case BeatPattern::pause:
-            playBackBufferIterator = copy(begin(pause), end(pause), playBackBufferIterator);
+        case BeatType::pause:
+            playBackBufferIterator =
+                copy(begin(pause.getAudioData()), end(pause.getAudioData()), playBackBufferIterator);
             break;
         }
     }
@@ -279,8 +187,10 @@ void BeatPlayer::startAudio()
     ma_result result;
     result = ma_context_init(nullptr, 0, nullptr, &context);
 
+    ma_format sample_format = ma_format_f32;
+
     // put the playback buffer inside the ma_audio_buffer structure
-    buf_config = ma_audio_buffer_config_init(ma_format_s16, 1, playBackBuffer.size(), playBackBuffer.data(), nullptr);
+    buf_config = ma_audio_buffer_config_init(sample_format, 1, playBackBuffer.size(), playBackBuffer.data(), nullptr);
     result     = ma_audio_buffer_init(&buf_config, &buf);
     if (result != MA_SUCCESS) {
         cout << "Audio buffer initialization failed, aborting\n";
@@ -289,7 +199,7 @@ void BeatPlayer::startAudio()
     }
 
     deviceConfig                          = ma_device_config_init(ma_device_type_playback);
-    deviceConfig.playback.format          = ma_format_s16;
+    deviceConfig.playback.format          = sample_format;
     deviceConfig.playback.channels        = 1;
     deviceConfig.sampleRate               = 48000;
     deviceConfig.periods                  = 2;
@@ -340,29 +250,21 @@ size_t BeatPlayer::getBPM() const
     return beatRate;
 }
 
-void BeatPlayer::setAccentuatedBeat(const vector<TBeatDataType>& newBeat)
+void BeatPlayer::setAccentuatedBeat(const AudioSignal& newBeat)
 {
     lock_guard<recursive_mutex> guard(setterMutex);
-    accentuatedBeat = newBeat;
+    accentuatedBeat = std::make_unique<AudioSignal>(newBeat);
     restart();
 }
 
-void BeatPlayer::setBeat(const vector<TBeatDataType>& newBeat)
+void BeatPlayer::setBeat(const AudioSignal& newBeat)
 {
     lock_guard<recursive_mutex> guard(setterMutex);
-    beat = newBeat;
+    beat = std::make_unique<AudioSignal>(newBeat);
     restart();
 }
 
-void BeatPlayer::setDataAndBPM(const vector<TBeatDataType>& beatData, size_t bpm)
-{
-    lock_guard<recursive_mutex> guard(setterMutex);
-    beat     = beatData;
-    beatRate = bpm;
-    restart();
-}
-
-void BeatPlayer::setAccentuatedPattern(const BeatPattern& pattern)
+void BeatPlayer::setAccentuatedPattern(const MetronomeBeats& pattern)
 {
     lock_guard<recursive_mutex> guard(setterMutex);
     beatPattern = pattern;
@@ -375,23 +277,23 @@ bool BeatPlayer::isRunning() const
 }
 
 
-BeatPattern::BeatPattern(const std::string& strPattern)
+MetronomeBeats::MetronomeBeats(const std::string& strPattern)
 {
     fromString(strPattern);
 }
-BeatPattern::BeatPattern(const std::vector<mnome::BeatPattern::BeatType>& otherPattern)
+MetronomeBeats::MetronomeBeats(const BeatPatternType& otherPattern)
 {
     pattern = otherPattern;
 }
 
-void BeatPattern::fromString(const std::string& strPattern)
+void MetronomeBeats::fromString(const std::string& strPattern)
 {
     pattern.clear();
     for (const char& character : strPattern) {
-        const auto convertedType = static_cast<BeatPattern::BeatType>(character);
+        const auto convertedType = static_cast<BeatType>(character);
 
         // the following switch will ignore all non valid conversions of character to
-        // BeatPattern::BeatType
+        // MetronomeBeats::BeatType
         switch (convertedType) {
         case BeatType::accent:
             pattern.push_back(BeatType::accent);
@@ -406,7 +308,7 @@ void BeatPattern::fromString(const std::string& strPattern)
     }
 }
 
-std::string BeatPattern::toString() const
+std::string MetronomeBeats::toString() const
 {
     std::stringstream ss;
     for (auto& type : pattern) {
@@ -415,7 +317,7 @@ std::string BeatPattern::toString() const
     return ss.str();
 }
 
-const std::vector<mnome::BeatPattern::BeatType>& BeatPattern::getBeatPattern() const
+const std::vector<mnome::BeatType>& MetronomeBeats::getBeatPattern() const
 {
     return pattern;
 }

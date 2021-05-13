@@ -5,6 +5,9 @@
 #ifndef MNOME_BEATPLAYER_H
 #define MNOME_BEATPLAYER_H
 
+#include "AudioSignal.hpp"
+
+#include <memory>
 #include <miniaudio.h>
 
 #include <atomic>
@@ -14,47 +17,47 @@
 
 namespace mnome {
 
+/// Types of metronome beats: accent, normal beat and pause
+enum class BeatType : char
+{
+    accent = '!',
+    beat   = '+',
+    pause  = '.',
+};
 
-using TBeatDataType = int16_t;
-
+/// A list of beats is a beat pattern
+using BeatPatternType = std::vector<mnome::BeatType>;
 
 /// A beat pattern is a list of different beat types
-///
-/// Currently accent, normal beat and pause beat types are supported.
-class BeatPattern
+class MetronomeBeats
 {
-public:
-    enum BeatType : char
-    {
-        accent = '!',
-        beat   = '+',
-        pause  = '.',
-    };
-
 private:
-    std::vector<mnome::BeatPattern::BeatType> pattern{};
+    BeatPatternType pattern{BeatType::beat};
 
 public:
-    BeatPattern() = default;
-    BeatPattern(const std::string& strPattern);
-    BeatPattern(const std::vector<mnome::BeatPattern::BeatType>& otherPattern);
+    explicit MetronomeBeats(const std::string& strPattern);
+    explicit MetronomeBeats(const BeatPatternType& otherPattern);
 
     void fromString(const std::string& strPattern);
     std::string toString() const;
 
-    const std::vector<mnome::BeatPattern::BeatType>& getBeatPattern() const;
+    const BeatPatternType& getBeatPattern() const;
 };
 
 
 /// Plays a beat at a certain number of times per minute
 class BeatPlayer
 {
+private:
+    // data members
     size_t beatRate;
+    std::unique_ptr<AudioSignal> beat;
+    std::unique_ptr<AudioSignal> accentuatedBeat;
+    AudioDataType playBackBuffer;
+    MetronomeBeats beatPattern{"!+++"};
+
+    // synchronization
     std::recursive_mutex setterMutex;
-    std::vector<TBeatDataType> beat;
-    std::vector<TBeatDataType> accentuatedBeat;
-    std::vector<TBeatDataType> playBackBuffer;
-    BeatPattern beatPattern{std::vector<BeatPattern::BeatType>{BeatPattern::BeatType::beat}};
     std::atomic_bool requestStop{false};
     std::atomic_bool running{false};
 
@@ -78,13 +81,13 @@ public:
 
     /// Set the sound of the beat that is played back
     /// \param  newBeat  samples the represent the beat
-    void setBeat(const std::vector<TBeatDataType>& newBeat);
+    void setBeat(const AudioSignal& newBeat);
 
     /// Set the sound of the beat that is played back
     /// \param  newBeat  samples the represent the accentuated beat
-    void setAccentuatedBeat(const std::vector<TBeatDataType>& newBeat);
+    void setAccentuatedBeat(const AudioSignal& newBeat);
 
-    void setAccentuatedPattern(const BeatPattern& pattern);
+    void setAccentuatedPattern(const MetronomeBeats& pattern);
 
     /// Start the BeatPlayer
     void start();
@@ -102,12 +105,12 @@ public:
 
     /// Change the beat that is played back
     /// \param  beatData  The beat that is played back
-    void setAccentuatedBeatData(const std::vector<TBeatDataType>& beatData);
+    void setAccentuatedBeatData(const AudioSignal& beatData);
 
     /// Change the beat and the beats per minute, for convenience
     /// \param  beatData  The beat that is played back
     /// \param  bpm  beats per minute
-    void setDataAndBPM(const std::vector<TBeatDataType>& beatData, size_t bpm);
+    void setDataAndBPM(const AudioSignal& beatData, size_t bpm);
 
     /// Indicates whether the audio playback is running
     bool isRunning() const;
@@ -120,13 +123,6 @@ private:
     void restart();
 };
 
-
-/// Generate a tone
-/// \param[in]   freq       tone frequency
-/// \param[in]   lengthS    length in seconds
-/// \param[in]   harmonics  number of harmonics to add to the tone
-/// \return      data       samples to be generated
-std::vector<int16_t> generateTone(const double freq, const double lengthS, const size_t addHarmonics);
 
 }  // namespace mnome
 
