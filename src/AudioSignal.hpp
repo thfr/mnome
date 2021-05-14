@@ -1,13 +1,16 @@
 #include <cstddef>
+#include <cstdint>
 #include <vector>
+
+namespace mnome {
 
 struct AudioSignalConfiguration
 {
     double sampleRate;
     double frequency;
-    size_t overtones;
-    double length;    //< length in [s]
-    double channels;  // are stored interleaved
+    double length;           //< length in [s]
+    std::uint8_t overtones;  //< number overtones
+    std::uint8_t channels;   //< number of interleaved channels
 };
 
 
@@ -24,3 +27,17 @@ public:
     void lowPass20KHz();
     void highPass20Hz();
 };
+
+template <typename TSample>
+AudioSignal<TSample> operator+(const AudioSignal<TSample>& summand);
+
+template <typename TSample>
+AudioSignal<TSample> operator-(const AudioSignal<TSample>& summand);
+
+template <typename TSample>
+AudioSignal<TSample>& operator+=(AudioSignal<TSample>& result, const AudioSignal<TSample>& summand);
+
+template <typename TSample>
+AudioSignal<TSample>& operator-=(AudioSignal<TSample>& result, const AudioSignal<TSample>& summand);
+
+};  // namespace mnome
