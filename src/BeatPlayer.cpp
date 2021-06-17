@@ -87,7 +87,7 @@ void BeatPlayer::start()
         return;
     }
 
-    playBackBuffer.clear();
+    // find suitable audio device configuration
 
     const auto beatIntervalSamples = static_cast<size_t>(floor(1.0 / (beatRate / 60.0) * PLAYBACK_RATE));
     auto localBeat                 = beat;
@@ -140,14 +140,14 @@ void BeatPlayer::start()
     auto playBackBufferIterator = back_inserter(playBackBuffer);
     for (const auto& beatType : pattern) {
         switch (beatType) {
-        case BeatPattern::accent:
+        case MetronomeBeats::accent:
             playBackBufferIterator =
                 copy(begin(localAccentuatedBeat), end(localAccentuatedBeat), playBackBufferIterator);
             break;
-        case BeatPattern::beat:
+        case MetronomeBeats::beat:
             playBackBufferIterator = copy(begin(localBeat), end(localBeat), playBackBufferIterator);
             break;
-        case BeatPattern::pause:
+        case MetronomeBeats::pause:
             playBackBufferIterator = copy(begin(pause), end(pause), playBackBufferIterator);
             break;
         }
@@ -266,7 +266,7 @@ void BeatPlayer::setDataAndBPM(const vector<TBeatDataType>& beatData, size_t bpm
     restart();
 }
 
-void BeatPlayer::setAccentuatedPattern(const BeatPattern& pattern)
+void BeatPlayer::setAccentuatedPattern(const MetronomeBeats& pattern)
 {
     lock_guard<recursive_mutex> guard(setterMutex);
     beatPattern = pattern;
@@ -279,23 +279,23 @@ bool BeatPlayer::isRunning() const
 }
 
 
-BeatPattern::BeatPattern(const std::string& strPattern)
+MetronomeBeats::MetronomeBeats(const std::string& strPattern)
 {
     fromString(strPattern);
 }
-BeatPattern::BeatPattern(const std::vector<mnome::BeatPattern::BeatType>& otherPattern)
+MetronomeBeats::MetronomeBeats(const BeatPatternType& otherPattern)
 {
     pattern = otherPattern;
 }
 
-void BeatPattern::fromString(const std::string& strPattern)
+void MetronomeBeats::fromString(const std::string& strPattern)
 {
     pattern.clear();
     for (const char& character : strPattern) {
-        const auto convertedType = static_cast<BeatPattern::BeatType>(character);
+        const auto convertedType = static_cast<MetronomeBeats::BeatType>(character);
 
         // the following switch will ignore all non valid conversions of character to
-        // BeatPattern::BeatType
+        // MetronomeBeats::BeatType
         switch (convertedType) {
         case BeatType::accent:
             pattern.push_back(BeatType::accent);
@@ -310,7 +310,7 @@ void BeatPattern::fromString(const std::string& strPattern)
     }
 }
 
-std::string BeatPattern::toString() const
+std::string MetronomeBeats::toString() const
 {
     std::stringstream ss;
     for (auto& type : pattern) {
@@ -319,7 +319,7 @@ std::string BeatPattern::toString() const
     return ss.str();
 }
 
-const std::vector<mnome::BeatPattern::BeatType>& BeatPattern::getBeatPattern() const
+const std::vector<mnome::MetronomeBeats::BeatType>& MetronomeBeats::getBeatPattern() const
 {
     return pattern;
 }

@@ -1,5 +1,10 @@
+/// AudioSignal
+///
+/// Contains audio samples and allows some operations
+
 #include "AudioSignal.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdbool>
 #include <cstdint>
@@ -14,8 +19,7 @@ constexpr double PI = 3.141592653589793;
 
 // Generated with http://www-users.cs.york.ac.uk/~fisher/mkfilter/ - no license given -
 // and adjusted to work as a standalone function.
-template <typename TSample>
-void lowPass20KHz(vector<TSample>& signal, bool round_result)
+void AudioSignal::lowPass20KHz()
 {
     /* Digital filter designed by mkfilter/mkshape/gencode   A.J. Fisher
      *    Command line: /www/usr/fisher/helpers/mkfilter -Bu -Lp -o 2 -a 4.1666666667e-01
@@ -28,40 +32,19 @@ void lowPass20KHz(vector<TSample>& signal, bool round_result)
     double xv[NZEROS + 1]{};
     double yv[NPOLES + 1]{};
 
-    for (auto& sample : signal) {
+    for (auto& sample : data) {
         xv[0]  = xv[1];
         xv[1]  = xv[2];
         xv[2]  = sample / GAIN;
         yv[0]  = yv[1];
         yv[1]  = yv[2];
         yv[2]  = (xv[0] + xv[2]) + 2 * xv[1] + (-0.4775922501 * yv[0]) + (-1.2796324250 * yv[1]);
-        sample = static_cast<TSample>(round_result ? round(yv[2]) : yv[2]);
+        sample = static_cast<SampleType>(yv[2]);
     }
 }
-void lowPass20KHz(vector<double>& signal)
-{
-    lowPass20KHz(signal, false);
-}
-
-void lowPass20KHz(vector<float>& signal)
-{
-    lowPass20KHz(signal, false);
-}
-
-void lowPass20KHz(vector<int16_t>& signal)
-{
-    lowPass20KHz(signal, true);
-}
-
-void lowPass20KHz(vector<uint16_t>& signal)
-{
-    lowPass20KHz(signal, true);
-}
-
 // Generated with http://www-users.cs.york.ac.uk/~fisher/mkfilter/ - no license given -
 // and adjusted to work as a standalone function.
-template <typename TSample>
-void highPass20Hz(vector<TSample>& signal, bool round_result)
+void AudioSignal::highPass20Hz()
 {
     /* Digital filter designed by mkfilter/mkshape/gencode   A.J. Fisher
      *    Command line: /www/usr/fisher/helpers/mkfilter -Bu -Lp -o 2 -a 4.1666666667e-01
@@ -74,44 +57,22 @@ void highPass20Hz(vector<TSample>& signal, bool round_result)
     double xv[NZEROS + 1]{};
     double yv[NPOLES + 1]{};
 
-    for (auto& sample : signal) {
+    for (auto& sample : data) {
         xv[0]  = xv[1];
         xv[1]  = xv[2];
         xv[2]  = sample / GAIN;
         yv[0]  = yv[1];
         yv[1]  = yv[2];
         yv[2]  = (xv[0] + xv[2]) - 2 * xv[1] + (-0.9963044430 * yv[0]) + (1.9962976018 * yv[1]);
-        sample = static_cast<TSample>(round_result ? round(yv[2]) : yv[2]);
+        sample = static_cast<SampleType>(yv[2]);
     }
 }
 
-void highPass20Hz(vector<double>& signal)
-{
-    highPass20Hz(signal, false);
-}
-
-void highPass20Hz(vector<float>& signal)
-{
-    highPass20Hz(signal, false);
-}
-
-void highPass20Hz(vector<int16_t>& signal)
-{
-    highPass20Hz(signal, true);
-}
-
-void highPass20Hz(vector<uint16_t>& signal)
-{
-    lowPass20KHz(signal, true);
-}
-
 /// Fade a signal in and out
-/// \tparam  T  datatype of the signal
 /// \param  data  signal to be faded
 /// \param  fadeInSamples  number of samples on which the fading in is done
 /// \param  fadeOutSamples  number of samples on which the fading out is done
-template <typename TSample>
-void fadeInOut(vector<TSample>& data, size_t fadeInSamples, size_t fadeOutSamples)
+void AudioSignal::fadeInOut(size_t fadeInSamples, size_t fadeOutSamples)
 {
     // *Exponential Fading* is used because it is more pleasant to ear than linear fading.
     //
@@ -143,17 +104,12 @@ void fadeInOut(vector<TSample>& data, size_t fadeInSamples, size_t fadeOutSample
     };
 }
 
-template <typename TSample>
-vector<TSample> generateTone(const double freq, const double lengthS, const size_t addHarmonics,
-                             const size_t sampleRate)
+vector<SampleType> generateTone(const double freq, const double lengthS, const size_t addHarmonics,
+                                const size_t sampleRate)
 {
-    // only allow float or double types
-    using value_type =
-        typename std::enable_if<std::is_same<float, TSample>::value || std::is_same<double, TSample>::value,
-                                TSample>::type;
     auto samples = static_cast<size_t>(floor(sampleRate * lengthS));
 
-    vector<value_type> data;
+    vector<SampleType> data;
     data.reserve(samples);
 
     for (size_t samIdx = 0; samIdx < samples; samIdx++) {
@@ -166,14 +122,54 @@ vector<TSample> generateTone(const double freq, const double lengthS, const size
             gain *= harmonicGainFactor;
             sample += gain * sin(samIdx * 2 * PI * (harmonic + 2) * freq / sampleRate);
         }
-        data.emplace_back(static_cast<value_type>(0.5 * sample));
+        data.emplace_back(static_cast<SampleType>(0.5 * sample));
     }
     return data;
 }
 
-template <>
-AudioSignal<float>::AudioSignal(const AudioSignalConfiguration& config)
-    : config{config},
-      data{generateTone<float>(config.frequency, config.length, config.overtones, config.sampleRate)} {};
+AudioSignal::AudioSignal(const AudioSignalConfiguration& config)
+    : config{config}, data{generateTone(config.frequency, config.length, config.overtones, config.sampleRate)} {}
+
+AudioSignal::AudioSignal(const AudioSignal& audio) : config{audio.config}, data{audio.data} {}
+
+AudioSignal::AudioSignal(AudioSignal&& audio) : config{std::move(audio.config)}, data{std::move(audio.data)} {}
+
+AudioSignal& AudioSignal::operator+=(const AudioSignal& summand)
+{
+    size_t max_length = std::max(data.size(), summand.data.size());
+    if (max_length > data.size()) {
+        data.resize(max_length, static_cast<SampleType>(0));
+    }
+    for (size_t index = 0; index < summand.data.size(); ++index) {
+        data[index] += summand.data[index];
+    }
+    return *this;
+}
+
+AudioSignal& AudioSignal::operator-=(const AudioSignal& summand)
+{
+    size_t max_length = std::max(data.size(), summand.data.size());
+    if (max_length > data.size()) {
+        data.resize(max_length, static_cast<SampleType>(0));
+    }
+    for (size_t index = 0; index < summand.data.size(); ++index) {
+        data[index] -= summand.data[index];
+    }
+    return *this;
+}
+
+AudioSignal&& operator+(const AudioSignal& summand1, const AudioSignal& summand2)
+{
+    AudioSignal result{summand1};
+    result += summand2;
+    return std::move(result);
+}
+
+AudioSignal&& operator-(const AudioSignal& minuend, const AudioSignal& subtrahend)
+{
+    AudioSignal result{minuend};
+    result -= subtrahend;
+    return std::move(result);
+}
 
 };  // namespace mnome

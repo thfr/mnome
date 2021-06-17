@@ -2,7 +2,12 @@
 #include <cstdint>
 #include <vector>
 
+#ifndef MNOME_AUDIOSIGNAL_HPP
+#define MNOME_AUDIOSIGNAL_HPP
+
 namespace mnome {
+
+using SampleType = float;
 
 struct AudioSignalConfiguration
 {
@@ -14,30 +19,36 @@ struct AudioSignalConfiguration
 };
 
 
-template <typename TSample>
 class AudioSignal
 {
 private:
     AudioSignalConfiguration config;
-    std::vector<TSample> data;
+    std::vector<SampleType> data;
 
 public:
-    AudioSignal(const AudioSignalConfiguration& config);
+    AudioSignal() = delete;
+
+    // usual initialization
+    explicit AudioSignal(const AudioSignalConfiguration& config);
+
+    // copy constructor
+    explicit AudioSignal(const AudioSignal& audio);
+
+    // move constructor
+    explicit AudioSignal(AudioSignal&& audio);
 
     void lowPass20KHz();
     void highPass20Hz();
+    void fadeInOut(size_t fadeInSamples, size_t fadeOutSamples);
+
+    AudioSignal& operator+=(const AudioSignal& summand);
+    AudioSignal& operator-=(const AudioSignal& summand);
 };
 
-template <typename TSample>
-AudioSignal<TSample> operator+(const AudioSignal<TSample>& summand);
+AudioSignal&& operator+(const AudioSignal& summand);
 
-template <typename TSample>
-AudioSignal<TSample> operator-(const AudioSignal<TSample>& summand);
-
-template <typename TSample>
-AudioSignal<TSample>& operator+=(AudioSignal<TSample>& result, const AudioSignal<TSample>& summand);
-
-template <typename TSample>
-AudioSignal<TSample>& operator-=(AudioSignal<TSample>& result, const AudioSignal<TSample>& summand);
+AudioSignal&& operator-(const AudioSignal& summand);
 
 };  // namespace mnome
+
+#endif  // MNOME_AUDIOSIGNAL_HPP
