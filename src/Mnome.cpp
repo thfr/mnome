@@ -1,6 +1,6 @@
 #include "Mnome.hpp"
 #include "AudioSignal.hpp"
-#include "src/BeatPlayer.hpp"
+#include "BeatPlayer.hpp"
 
 #include <cmath>
 #include <cstddef>
