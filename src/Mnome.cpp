@@ -13,16 +13,14 @@ constexpr size_t PLAYBACK_RATE = 48'000;  // [Hz]
 
 Mnome::Mnome() : bp{80}
 {
-    auto halfToneOffset = [](double baseFreq, size_t offset) -> double {
-        return baseFreq * pow(pow(2, 1 / 12.0), offset);
-    };
     double normalBeatHz      = halfToneOffset(440, 2);           // base tone = B
     double accentuatedBeatHz = halfToneOffset(normalBeatHz, 7);  // base tone + quint
     uint8_t overtones        = 4;
-    // generate the beat
     AudioSignalConfiguration audioConfig{PLAYBACK_RATE, 1};
     ToneConfiguration toneConfigNormal{0.0750, normalBeatHz, overtones};
     ToneConfiguration toneConfigAccentuated{0.0750, accentuatedBeatHz, overtones};
+
+    // generate the beat
     auto accentuatedBeat = generateTone(audioConfig, toneConfigAccentuated);
     auto normalBeat      = generateTone(audioConfig, toneConfigNormal);
 
@@ -30,16 +28,16 @@ Mnome::Mnome() : bp{80}
     bp.setAccentuatedBeat(accentuatedBeat);
     bp.setAccentuatedPattern(MetronomeBeats("!+++"));
 
-    // set commands for the repl
+    // bind keywords to function callbacks
     ReplCommandList commands;
-    // make ENTER start and stop
-    commands.emplace("", bind(&Mnome::togglePlayback, this));
     commands.emplace("exit", bind(&Mnome::stop, this));
     commands.emplace("quit", bind(&Mnome::stop, this));
     commands.emplace("start", bind(&Mnome::startPlayback, this));
     commands.emplace("stop", bind(&Mnome::stopPlayback, this));
     commands.emplace("bpm", bind(&Mnome::setBPM, this, std::placeholders::_1));
     commands.emplace("pattern", bind(&Mnome::setBeatPattern, this, std::placeholders::_1));
+    // make ENTER start and stop
+    commands.emplace("", bind(&Mnome::togglePlayback, this));
 
     repl.setCommands(commands);
     repl.start();

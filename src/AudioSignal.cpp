@@ -116,35 +116,6 @@ void AudioSignal::fadeInOut(size_t fadeInSamples, size_t fadeOutSamples)
     };
 }
 
-AudioSignal generateTone(const AudioSignalConfiguration& audioConfig, const ToneConfiguration& toneConfig)
-{
-    auto sampleRate   = audioConfig.sampleRate;
-    auto lengthS      = toneConfig.length;
-    auto freq         = toneConfig.frequency;
-    auto addHarmonics = toneConfig.overtones;
-    auto samples      = static_cast<size_t>(floor(sampleRate * lengthS));
-
-    AudioDataType data;
-    data.reserve(samples);
-
-    for (size_t samIdx = 0; samIdx < samples; samIdx++) {
-        double sample = sin(samIdx * 2 * PI * freq / sampleRate);
-
-        // add harmonics
-        double harmonicGainFactor = 0.5;
-        double gain               = 0.5;
-        for (size_t harmonic = 0; harmonic < addHarmonics; ++harmonic) {
-            gain *= harmonicGainFactor;
-            sample += gain * sin(samIdx * 2 * PI * (harmonic + 2) * freq / sampleRate);
-        }
-        for (size_t channelIdx = 0; channelIdx < audioConfig.channels; ++channelIdx) {
-            data.emplace_back(static_cast<SampleType>(0.5 * sample));
-        }
-    }
-    return AudioSignal(audioConfig, std::move(data));
-}
-
-
 const AudioDataType& AudioSignal::getAudioData() const
 {
     return data;
@@ -217,5 +188,40 @@ AudioSignal operator-(AudioSignal minuend, const AudioSignal& subtrahend)
     minuend -= subtrahend;
     return AudioSignal{std::move(minuend)};
 }
+
+
+AudioSignal generateTone(const AudioSignalConfiguration& audioConfig, const ToneConfiguration& toneConfig)
+{
+    auto sampleRate   = audioConfig.sampleRate;
+    auto lengthS      = toneConfig.length;
+    auto freq         = toneConfig.frequency;
+    auto addHarmonics = toneConfig.overtones;
+    auto samples      = static_cast<size_t>(floor(sampleRate * lengthS));
+
+    AudioDataType data;
+    data.reserve(samples);
+
+    for (size_t samIdx = 0; samIdx < samples; samIdx++) {
+        double sample = sin(samIdx * 2 * PI * freq / sampleRate);
+
+        // add harmonics
+        double harmonicGainFactor = 0.5;
+        double gain               = 0.5;
+        for (size_t harmonic = 0; harmonic < addHarmonics; ++harmonic) {
+            gain *= harmonicGainFactor;
+            sample += gain * sin(samIdx * 2 * PI * (harmonic + 2) * freq / sampleRate);
+        }
+        for (size_t channelIdx = 0; channelIdx < audioConfig.channels; ++channelIdx) {
+            data.emplace_back(static_cast<SampleType>(0.5 * sample));
+        }
+    }
+    return AudioSignal(audioConfig, std::move(data));
+}
+
+double halfToneOffset(double baseFreq, size_t offset)
+{
+    return baseFreq * pow(pow(2, 1 / 12.0), offset);
+};
+
 
 };  // namespace mnome

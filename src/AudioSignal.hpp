@@ -65,6 +65,9 @@ AudioSignal operator-(AudioSignal minuend, const AudioSignal& summand);
 /// Generate specific tone as an AudioSignal
 AudioSignal generateTone(const AudioSignalConfiguration& audioConfig, const ToneConfiguration& toneConfig);
 
+/// Calculate frequency certain half steps away from a base frequency
+double halfToneOffset(double baseFreq, size_t offset);
+
 };  // namespace mnome
 
 #endif  // MNOME_AUDIOSIGNAL_HPP
