@@ -28,8 +28,8 @@ public:
     void stopPlayback();
     void startPlayback();
     void togglePlayback();
-    void setBPM(const std::string& bpmStr);
-    void setBeatPattern(const std::string& patternStr);
+    void setBPM(const std::optional<std::string> bpmStr);
+    void setBeatPattern(const std::optional<std::string> patternStr);
     bool isPlaying() const;
 
     /// Wait for the read evaluate loop to finish

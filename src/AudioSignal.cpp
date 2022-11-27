@@ -21,7 +21,7 @@ constexpr double PI = 3.141592653589793;
 
 
 AudioSignal::AudioSignal(const AudioSignalConfiguration& config, double lengthS)
-    : config{config}, data{AudioDataType(static_cast<size_t>(config.channels * config.channels * lengthS), 0)}
+    : config{config}, data{AudioDataType(static_cast<size_t>(config.channels * config.sampleRate * lengthS), 0)}
 {
 }
 

@@ -11,14 +11,15 @@ namespace mnome {
 
 constexpr size_t PLAYBACK_RATE = 48'000;  // [Hz]
 
-Mnome::Mnome() : bp{80}
+Mnome::Mnome()
 {
     double normalBeatHz      = halfToneOffset(440, 2);           // base tone = B
     double accentuatedBeatHz = halfToneOffset(normalBeatHz, 7);  // base tone + quint
-    uint8_t overtones        = 4;
+    double beatDuration      = 0.05;                             // [s]
+    uint8_t overtones        = 1;
     AudioSignalConfiguration audioConfig{PLAYBACK_RATE, 1};
-    ToneConfiguration toneConfigNormal{0.0750, normalBeatHz, overtones};
-    ToneConfiguration toneConfigAccentuated{0.0750, accentuatedBeatHz, overtones};
+    ToneConfiguration toneConfigNormal{beatDuration, normalBeatHz, overtones};
+    ToneConfiguration toneConfigAccentuated{beatDuration, accentuatedBeatHz, overtones};
 
     // generate the beat
     auto accentuatedBeat = generateTone(audioConfig, toneConfigAccentuated);
@@ -76,27 +77,44 @@ void Mnome::togglePlayback()
         bp.start();
     }
 }
-void Mnome::setBPM(const string& bpmStr)
+void Mnome::setBPM(const std::optional<std::string> args)
 {
+    auto displayHelp = []() { cout << "Command usage: bpm <number>" << endl; };
     lock_guard<mutex> lg(cmdMtx);
-    try {
-        size_t bpm = !bpmStr.empty() ? stoul(bpmStr, nullptr, 10) : 80;
-        bp.setBPM(bpm);
+    if (args) {
+        const string bpmStr = args.value();
+        try {
+            size_t bpm = !bpmStr.empty() ? stoul(bpmStr, nullptr, 10) : 80;
+            bp.setBPM(bpm);
+        }
+        catch (exception& e) {
+            cout << "Could get beats per minute from \"" << bpmStr << "\"" << endl;
+            displayHelp();
+        };
     }
-    catch (exception& e) {
-        cout << "Could get beats per minute from \"" << bpmStr << "\"" << endl;
-    };
+    else {
+        displayHelp();
+    }
 }
-void Mnome::setBeatPattern(const string& patternStr)
+void Mnome::setBeatPattern(const std::optional<std::string> args)
 {
-    lock_guard<mutex> lg(cmdMtx);
-    if ((patternStr.find('*') == string::npos) && (patternStr.find('+') == string::npos)) {
+    auto displayHelp = []() {
         cout << "Command usage: pattern <pattern>" << endl;
         cout << "  <pattern> must be in the form of `[!|+|.]*`" << endl;
         cout << "  `!` = accentuated beat  `+` = normal beat  `.` = pause" << endl;
-        return;
+    };
+    lock_guard<mutex> lg(cmdMtx);
+    if (args) {
+        const string patternStr = args.value();
+        if ((patternStr.find('*') == string::npos) && (patternStr.find('+') == string::npos)) {
+            displayHelp();
+            return;
+        }
+        bp.setAccentuatedPattern(MetronomeBeats(patternStr));
     }
-    bp.setAccentuatedPattern(MetronomeBeats(patternStr));
+    else {
+        displayHelp();
+    }
 }
 
 bool Mnome::isPlaying() const

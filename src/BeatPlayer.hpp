@@ -70,12 +70,7 @@ private:
 
 
 public:
-    /// Constructor
-    /// \param  beatRate  rate of the beat in [bpm]
-    /// \param  beat      raw data of one beat
-    BeatPlayer(size_t bRate);
-
-    BeatPlayer() = delete;
+    BeatPlayer();
 
     ~BeatPlayer();
 

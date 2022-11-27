@@ -9,6 +9,7 @@
 #include <functional>
 #include <iostream>
 #include <memory>
+#include <optional>
 #include <string>
 #include <thread>
 #include <unordered_map>
@@ -16,7 +17,8 @@
 
 namespace mnome {
 
-using ReplCommandList = std::unordered_map<std::string, std::function<void(std::string&)>>;
+using CommandFunction = std::function<void(const std::optional<std::string>)>;
+using ReplCommandList = std::unordered_map<std::string, CommandFunction>;
 
 /// Read evaluate print loop
 class Repl
@@ -57,6 +59,10 @@ public:
 private:
     /// The method that the thread runs
     void run();
+
+    /// Print all avaiable commands or the specific command help
+    /// \par arg Command for which to display help message
+    void printHelp(std::optional<std::string> arg);
 };
 
 

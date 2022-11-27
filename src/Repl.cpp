@@ -8,11 +8,14 @@ using namespace std;
 
 namespace mnome {
 
+/// Name of ENTER key within the list of commands
+std::string ENTER_KEY_NAME = "<ENTER KEY>";
+
 /// Trim first spaces of a string
 /// \note see https://stackoverflow.com/a/217605
 static inline std::string& ltrim(std::string& s)
 {
-    s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](int c) { return 0 == std::isspace(c); }));
+    s.erase(s.begin(), find_if(s.begin(), s.end(), [](int c) { return 0 == isspace(c); }));
     return s;
 }
 
@@ -20,7 +23,7 @@ static inline std::string& ltrim(std::string& s)
 /// \note see https://stackoverflow.com/a/217605
 static inline void rtrim(std::string& s)
 {
-    s.erase(std::find_if(s.rbegin(), s.rend(), [](int ch) { return 0 == std::isspace(ch); }).base(), s.end());
+    s.erase(find_if(s.rbegin(), s.rend(), [](int ch) { return 0 == isspace(ch); }).base(), s.end());
 }
 
 
@@ -71,12 +74,12 @@ void Repl::waitForStop()
 
 void Repl::run()
 {
-    string input;
     while (!requestStop) {
         // prompt
         outputStream << endl;
         outputStream << "[mnome]: ";
 
+        string input;
         getline(inputStream, input);
 
         // catch ctrl+d
@@ -88,25 +91,75 @@ void Repl::run()
 
         size_t cmdSep = input.find(' ', 0);
 
-        // find command in command list
-        string commandString = input.substr(0, cmdSep);
+        // find command and arguments in input
+        const string commandString = input.substr(0, cmdSep);
+        const auto args = (cmdSep != string::npos) ? optional<string>{input.substr(cmdSep + 1, string::npos)} : nullopt;
         auto possibleCommand = commands.find(commandString);
         if (end(commands) == possibleCommand) {
-            outputStream << "\"" << commandString << "\" is not a valid command" << endl;
+            // give standard implementations for help, exit and quit commands
+            if (commandString == "help") {
+                printHelp(args);
+            }
+            else if (commandString == "exit" || commandString == "quit") {
+                stop();
+            }
+            else {
+                outputStream << "\"" << commandString << "\" is not a valid command" << endl;
+                printHelp(nullopt);
+            }
             continue;
         }
 
         try {
             // execute command with parameters
-            string args = (cmdSep != string::npos) ? input.substr(cmdSep + 1, string::npos) : string{};
             possibleCommand->second(args);
         }
-        catch (const std::exception& e) {  // reference to the base of a polymorphic object
+        catch (const exception& e) {
             outputStream << "Could not get that, please try again" << endl;
-            outputStream << e.what();  // information from length_error printed
+            outputStream << e.what();
         }
     }
     requestStop = false;
+}
+
+void Repl::printHelp(std::optional<std::string> arg)
+{
+    auto displayCommandName = [](const string& cmd) -> const string& {
+        if (cmd == "") {
+            return ENTER_KEY_NAME;
+        }
+        else {
+            return cmd;
+        }
+    };
+    if (arg) {
+        // try to display help message for the command specified in arg
+        const auto argString = arg.value();
+        auto possibleCommand = commands.find(argString);
+        if (end(commands) == possibleCommand) {
+            outputStream << "\"" << argString << "\" is not a valid command to show help for" << endl;
+        }
+        else {
+            outputStream << "\"" << displayCommandName(possibleCommand->first)
+                         << "\" is valid command, displaying help message is not yet supported";
+        }
+        outputStream << std::endl;
+    }
+    else {
+        // display known commands
+        if (!commands.empty()) {
+            outputStream << "Known commands: ";
+            auto commandIter = begin(commands);
+            outputStream << "\"" << displayCommandName(commandIter->first) << "\"";
+            while (++commandIter != end(commands)) {
+                outputStream << ", \"" << displayCommandName(commandIter->first) << "\"";
+            }
+            outputStream << endl;
+        }
+        else {
+            outputStream << "There are no commands defined, this REPL does nothing" << endl;
+        }
+    }
 }
 
 }  // namespace mnome

@@ -19,9 +19,9 @@ TEST(ReplTest, 1)
 
     ReplCommandList commands;
     commands.emplace(
-        exit, [&exit, &executedCommands](std::string&) { executedCommands.push_back(exit); });
+        exit, [&exit, &executedCommands](const std::optional<std::string>) { executedCommands.push_back(exit); });
     commands.emplace(
-        start, [&start, &executedCommands](std::string&) { executedCommands.push_back(start); });
+        start, [&start, &executedCommands](const std::optional<std::string>) { executedCommands.push_back(start); });
 
     std::stringstream is;  // TODO does not work, fix it
     std::stringstream os;

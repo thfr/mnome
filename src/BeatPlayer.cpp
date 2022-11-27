@@ -21,11 +21,12 @@
 using namespace std;
 
 
-constexpr size_t PLAYBACK_RATE           = 48'000;  // [Hz]
-constexpr double PLAYBACK_MIN_ALSA_WRITE = 0.1;     // [s]
-constexpr double FADE_MIN_TIME           = 0.025;   // [s]
 constexpr double FADE_MIN_PERCENTAGE     = 0.30;
+constexpr double FADE_MIN_TIME           = 0.025;  // [s]
 constexpr double PI                      = 3.141592653589793;
+constexpr double PLAYBACK_MIN_ALSA_WRITE = 0.1;  // [s]
+constexpr size_t DEFAULT_BPM             = 100;
+constexpr size_t PLAYBACK_RATE           = 48'000;  // [Hz]
 
 
 namespace mnome {
@@ -71,7 +72,7 @@ vector<int16_t> generateTone(const double freq, const double lengthS, const size
 }
 
 
-BeatPlayer::BeatPlayer(const size_t brate) : beatRate(brate)
+BeatPlayer::BeatPlayer() : beatRate(DEFAULT_BPM)
 {
 }
 
@@ -131,6 +132,7 @@ void BeatPlayer::start()
 
     // prepare the sounds for each beat pattern type
     adjustBuffer(localBeat);
+    adjustBuffer(pause);
     if (localAccentuatedBeat.numberSamples() == 0) {
         localAccentuatedBeat = AudioSignal(static_cast<const AudioSignal&>(localBeat));
     }
@@ -151,6 +153,7 @@ void BeatPlayer::start()
                 copy(begin(localBeat.getAudioData()), end(localBeat.getAudioData()), playBackBufferIterator);
             break;
         case BeatType::pause:
+            cout << "pause is inserted" << endl;
             playBackBufferIterator =
                 copy(begin(pause.getAudioData()), end(pause.getAudioData()), playBackBufferIterator);
             break;
