@@ -3,9 +3,11 @@
 /// Plays a beat
 
 #include "BeatPlayer.hpp"
+#include "miniaudio.h"
 
 #include <algorithm>
 #include <atomic>
+#include <bits/chrono.h>
 #include <cassert>
 #include <chrono>
 #include <cmath>
@@ -14,6 +16,7 @@
 #include <iostream>
 #include <memory>
 #include <mutex>
+#include <numbers>
 #include <sstream>
 #include <vector>
 
@@ -23,9 +26,7 @@ using namespace std;
 
 constexpr double FADE_MIN_PERCENTAGE     = 0.30;
 constexpr double FADE_MIN_TIME           = 0.025;  // [s]
-constexpr double PI                      = 3.141592653589793;
-constexpr double PLAYBACK_MIN_ALSA_WRITE = 0.1;  // [s]
-constexpr size_t DEFAULT_BPM             = 100;
+constexpr size_t PLAYBACK_MIN_ALSA_WRITE = 100;    // [ms]
 constexpr size_t PLAYBACK_RATE           = 48'000;  // [Hz]
 
 
@@ -57,16 +58,18 @@ vector<int16_t> generateTone(const double freq, const double lengthS, const size
     data.reserve(samples);
 
     for (size_t samIdx = 0; samIdx < samples; samIdx++) {
-        double sample = sin(samIdx * 2 * PI * freq / PLAYBACK_RATE);
+        double sample = sin(samIdx * 2 * numbers::pi * freq / PLAYBACK_RATE);
 
         // add harmonics
-        double harmonicGainFactor = 0.5;
-        double gain               = 0.5;
+        constexpr double harmonicGain = 0.5;
+        constexpr double initialGain  = 0.5;
+        constexpr double volume       = 0.5;
+        double gain                   = initialGain;
         for (size_t harmonic = 0; harmonic < addHarmonics; ++harmonic) {
-            gain *= harmonicGainFactor;
-            sample += gain * sin(samIdx * 2 * PI * (harmonic + 2) * freq / PLAYBACK_RATE);
+            gain *= harmonicGain;
+            sample += gain * sin(samIdx * 2 * numbers::pi * (harmonic + 2) * freq / PLAYBACK_RATE);
         }
-        data.emplace_back(static_cast<int16_t>(INT16_MAX * 0.5 * sample));
+        data.emplace_back(static_cast<int16_t>(INT16_MAX * volume * sample));
     }
     return data;
 }
@@ -174,14 +177,14 @@ void miniaudio_data_callback(ma_device* pDevice, void* pOutput, const void* pInp
         cout.flush();
         return;
     }
-    ma_audio_buffer_read_pcm_frames(buffer, pOutput, frameCount, true);
+    ma_audio_buffer_read_pcm_frames(buffer, pOutput, frameCount, static_cast<ma_bool32>(true));
     (void)pInput;
 }
 
 
 void BeatPlayer::startAudio()
 {
-    lock_guard<recursive_mutex> lg(setterMutex);
+    lock_guard<recursive_mutex> lockGuard(setterMutex);
     if (isRunning()) {
         cout << "Audio playback was started though it is already running\n";
         return;
@@ -204,9 +207,9 @@ void BeatPlayer::startAudio()
     deviceConfig                          = ma_device_config_init(ma_device_type_playback);
     deviceConfig.playback.format          = sample_format;
     deviceConfig.playback.channels        = 1;
-    deviceConfig.sampleRate               = 48000;
+    deviceConfig.sampleRate               = PLAYBACK_RATE;
     deviceConfig.periods                  = 2;
-    deviceConfig.periodSizeInMilliseconds = PLAYBACK_MIN_ALSA_WRITE * 1000;
+    deviceConfig.periodSizeInMilliseconds = PLAYBACK_MIN_ALSA_WRITE;
     deviceConfig.dataCallback             = miniaudio_data_callback;
     deviceConfig.pUserData                = &buf;
 
@@ -222,7 +225,7 @@ void BeatPlayer::startAudio()
 
 void BeatPlayer::stop()
 {
-    lock_guard<recursive_mutex> lg(setterMutex);
+    lock_guard<recursive_mutex> lockGuard(setterMutex);
     if (isRunning()) {
         cout << "Stopping playback" << endl;
         ma_device_uninit(&device);
@@ -313,11 +316,11 @@ void MetronomeBeats::fromString(const std::string& strPattern)
 
 std::string MetronomeBeats::toString() const
 {
-    std::stringstream ss;
-    for (auto& type : pattern) {
-        ss << static_cast<char>(type);
+    std::stringstream sStream;
+    for (const auto& type : pattern) {
+        sStream << static_cast<char>(type);
     }
-    return ss.str();
+    return sStream.str();
 }
 
 const std::vector<mnome::BeatType>& MetronomeBeats::getBeatPattern() const

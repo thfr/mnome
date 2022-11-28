@@ -17,6 +17,8 @@
 
 namespace mnome {
 
+constexpr size_t DEFAULT_BPM = 100;
+
 /// Types of metronome beats: accent, normal beat and pause
 enum class BeatType : char
 {

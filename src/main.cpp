@@ -16,9 +16,10 @@ unique_ptr<mnome::Mnome> App;
 }  // namespace
 
 
-void shutDownAppHandler(int)
+void shutDownAppHandler(int signalCode)
 {
-    lock_guard<mutex> lg{AppMutex};
+    (void) signalCode;
+    lock_guard<mutex> lockGuard{AppMutex};
     if (App) {
         App->stop();
     }
@@ -31,7 +32,7 @@ int main()
     signal(SIGABRT, shutDownAppHandler);
 
     {
-        lock_guard<mutex> lg{AppMutex};
+        lock_guard<mutex> lockGuard{AppMutex};
         App = make_unique<mnome::Mnome>();
     }
 

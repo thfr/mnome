@@ -11,14 +11,12 @@
 #include <cstdint>
 #include <exception>
 #include <limits>
+#include <numbers>
 
 
 namespace mnome {
 
 using namespace std;
-
-constexpr double PI = 3.141592653589793;
-
 
 AudioSignal::AudioSignal(const AudioSignalConfiguration& config, double lengthS)
     : config{config}, data{AudioDataType(static_cast<size_t>(config.channels * config.sampleRate * lengthS), 0)}
@@ -202,14 +200,14 @@ AudioSignal generateTone(const AudioSignalConfiguration& audioConfig, const Tone
     data.reserve(samples);
 
     for (size_t samIdx = 0; samIdx < samples; samIdx++) {
-        double sample = sin(samIdx * 2 * PI * freq / sampleRate);
+        double sample = sin(samIdx * 2 * numbers::pi * freq / sampleRate);
 
         // add harmonics
         double harmonicGainFactor = 0.5;
         double gain               = 0.5;
         for (size_t harmonic = 0; harmonic < addHarmonics; ++harmonic) {
             gain *= harmonicGainFactor;
-            sample += gain * sin(samIdx * 2 * PI * (harmonic + 2) * freq / sampleRate);
+            sample += gain * sin(samIdx * 2 * numbers::pi * (harmonic + 2) * freq / sampleRate);
         }
         for (size_t channelIdx = 0; channelIdx < audioConfig.channels; ++channelIdx) {
             data.emplace_back(static_cast<SampleType>(0.5 * sample));

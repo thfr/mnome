@@ -34,7 +34,7 @@ public:
     Repl();
 
     /// Ctor with command list
-    Repl(ReplCommandList& cmds, std::istream& is = std::cin, std::ostream& os = std::cout);
+    Repl(ReplCommandList& cmds, std::istream& inputStream = std::cin, std::ostream& outputStream = std::cout);
 
     ~Repl();
 

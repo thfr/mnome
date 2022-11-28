@@ -13,17 +13,19 @@ std::string ENTER_KEY_NAME = "<ENTER KEY>";
 
 /// Trim first spaces of a string
 /// \note see https://stackoverflow.com/a/217605
-static inline std::string& ltrim(std::string& s)
+static inline std::string& ltrim(std::string& input)
 {
-    s.erase(s.begin(), find_if(s.begin(), s.end(), [](int c) { return 0 == isspace(c); }));
-    return s;
+    input.erase(input.begin(),
+                find_if(input.begin(), input.end(), [](int character) { return 0 == isspace(character); }));
+    return input;
 }
 
 /// Trim trailing spaces of a string
 /// \note see https://stackoverflow.com/a/217605
-static inline void rtrim(std::string& s)
+static inline void rtrim(std::string& input)
 {
-    s.erase(find_if(s.rbegin(), s.rend(), [](int ch) { return 0 == isspace(ch); }).base(), s.end());
+    input.erase(find_if(input.rbegin(), input.rend(), [](int character) { return 0 == isspace(character); }).base(),
+                input.end());
 }
 
 
@@ -31,8 +33,8 @@ Repl::Repl() : inputStream{std::cin}, outputStream{std::cout}, myThread{nullptr}
 {
 }
 
-Repl::Repl(ReplCommandList& cmds, std::istream& is, std::ostream& os)
-    : commands{cmds}, inputStream{is}, outputStream{os}, myThread{nullptr}, requestStop{false}
+Repl::Repl(ReplCommandList& cmds, std::istream& inputStream, std::ostream& outputStream)
+    : commands{cmds}, inputStream{inputStream}, outputStream{outputStream}, myThread{nullptr}, requestStop{false}
 {
 }
 
@@ -125,12 +127,10 @@ void Repl::run()
 void Repl::printHelp(std::optional<std::string> arg)
 {
     auto displayCommandName = [](const string& cmd) -> const string& {
-        if (cmd == "") {
+        if (cmd.empty()) {
             return ENTER_KEY_NAME;
         }
-        else {
-            return cmd;
-        }
+        return cmd;
     };
     if (arg) {
         // try to display help message for the command specified in arg

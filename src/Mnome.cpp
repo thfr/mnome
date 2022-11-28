@@ -9,21 +9,23 @@ using namespace std;
 
 namespace mnome {
 
-constexpr size_t PLAYBACK_RATE = 48'000;  // [Hz]
+constexpr size_t PLAYBACK_RATE    = 48'000;  // [Hz]
+constexpr double TONE_A1_BASEFREQ = 440;     // [Hz]
+constexpr size_t QUINT_HALFSTEPS  = 7;
 
 Mnome::Mnome()
 {
-    double normalBeatHz      = halfToneOffset(440, 2);           // base tone = B
-    double accentuatedBeatHz = halfToneOffset(normalBeatHz, 7);  // base tone + quint
-    double beatDuration      = 0.05;                             // [s]
-    uint8_t overtones        = 1;
+    const double normalBeatHz      = halfToneOffset(TONE_A1_BASEFREQ, 2);            // base tone = B
+    const double accentuatedBeatHz = halfToneOffset(normalBeatHz, QUINT_HALFSTEPS);  // base tone + quint
+    constexpr double beatDuration  = 0.05;                                           // [s]
+    constexpr uint8_t overtones    = 1;
     AudioSignalConfiguration audioConfig{PLAYBACK_RATE, 1};
     ToneConfiguration toneConfigNormal{beatDuration, normalBeatHz, overtones};
     ToneConfiguration toneConfigAccentuated{beatDuration, accentuatedBeatHz, overtones};
 
     // generate the beat
-    auto accentuatedBeat = generateTone(audioConfig, toneConfigAccentuated);
-    auto normalBeat      = generateTone(audioConfig, toneConfigNormal);
+    const auto accentuatedBeat = generateTone(audioConfig, toneConfigAccentuated);
+    const auto normalBeat      = generateTone(audioConfig, toneConfigNormal);
 
     bp.setBeat(normalBeat);
     bp.setAccentuatedBeat(accentuatedBeat);
@@ -46,7 +48,7 @@ Mnome::Mnome()
 
 void Mnome::stop()
 {
-    lock_guard<mutex> lg(cmdMtx);
+    lock_guard<mutex> lockGuard(cmdMtx);
     bp.stop();
     repl.stop();
 }
@@ -59,17 +61,17 @@ void Mnome::waitForStop()
 
 void Mnome::stopPlayback()
 {
-    lock_guard<mutex> lg(cmdMtx);
+    lock_guard<mutex> lockGuard(cmdMtx);
     bp.stop();
 }
 void Mnome::startPlayback()
 {
-    lock_guard<mutex> lg(cmdMtx);
+    lock_guard<mutex> lockGuard(cmdMtx);
     bp.start();
 }
 void Mnome::togglePlayback()
 {
-    lock_guard<mutex> lg(cmdMtx);
+    lock_guard<mutex> lockGuard(cmdMtx);
     if (bp.isRunning()) {
         bp.stop();
     }
@@ -80,11 +82,11 @@ void Mnome::togglePlayback()
 void Mnome::setBPM(const std::optional<std::string> args)
 {
     auto displayHelp = []() { cout << "Command usage: bpm <number>" << endl; };
-    lock_guard<mutex> lg(cmdMtx);
+    lock_guard<mutex> lockGuard(cmdMtx);
     if (args) {
         const string bpmStr = args.value();
         try {
-            size_t bpm = !bpmStr.empty() ? stoul(bpmStr, nullptr, 10) : 80;
+            size_t bpm = !bpmStr.empty() ? stoul(bpmStr) : DEFAULT_BPM;
             bp.setBPM(bpm);
         }
         catch (exception& e) {
@@ -103,7 +105,7 @@ void Mnome::setBeatPattern(const std::optional<std::string> args)
         cout << "  <pattern> must be in the form of `[!|+|.]*`" << endl;
         cout << "  `!` = accentuated beat  `+` = normal beat  `.` = pause" << endl;
     };
-    lock_guard<mutex> lg(cmdMtx);
+    lock_guard<mutex> lockGuard(cmdMtx);
     if (args) {
         const string patternStr = args.value();
         if ((patternStr.find('*') == string::npos) && (patternStr.find('+') == string::npos)) {
