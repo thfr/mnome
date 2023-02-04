@@ -1,4 +1,3 @@
-
 #include <Repl.hpp>
 
 #include <gtest/gtest.h>
@@ -14,8 +13,9 @@ TEST(ReplTest, 1)
 {
     std::vector<const char*> executedCommands;
 
-    const char* exit  = "exit";
-    const char* start = "start";
+    const char* exit    = "exit";
+    const char* start   = "start";
+    const auto waitTime = chrono::milliseconds(5);
 
     ReplCommandList commands;
     commands.emplace(
@@ -23,14 +23,14 @@ TEST(ReplTest, 1)
     commands.emplace(
         start, [&start, &executedCommands](const std::optional<std::string>) { executedCommands.push_back(start); });
 
-    std::stringstream is;  // TODO does not work, fix it
-    std::stringstream os;
-    Repl dut(commands, is, os);
+    std::stringstream iStream;  // TODO does not work, fix it
+    std::stringstream oStream;
+    Repl dut(commands, iStream, oStream);
 
     dut.start();
-    is << "exit\nstart\n";
-    is.sync();
-    this_thread::sleep_for(chrono::milliseconds(5));
+    iStream << "exit\nstart\n";
+    iStream.sync();
+    this_thread::sleep_for(waitTime);
     dut.stop();
     dut.waitForStop();
     EXPECT_EQ(executedCommands[0], exit);

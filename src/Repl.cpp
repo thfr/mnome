@@ -33,8 +33,8 @@ Repl::Repl() : inputStream{std::cin}, outputStream{std::cout}, myThread{nullptr}
 {
 }
 
-Repl::Repl(ReplCommandList& cmds, std::istream& inputStream, std::ostream& outputStream)
-    : commands{cmds}, inputStream{inputStream}, outputStream{outputStream}, myThread{nullptr}, requestStop{false}
+Repl::Repl(ReplCommandList& cmds, std::istream& iStream, std::ostream& oStream)
+    : commands{cmds}, inputStream{iStream}, outputStream{oStream}, myThread{nullptr}, requestStop{false}
 {
 }
 

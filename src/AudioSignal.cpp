@@ -16,15 +16,38 @@
 
 namespace mnome {
 
+const size_t halfStepsInOctave = 12;
+
 using namespace std;
 
-AudioSignal::AudioSignal(const AudioSignalConfiguration& config, double lengthS)
-    : config{config}, data{AudioDataType(static_cast<size_t>(config.channels * config.sampleRate * lengthS), 0)}
+AudioSignal::AudioSignal(const AudioSignalConfiguration& as_config, double lengthS)
+    : config{as_config}, data{AudioDataType(static_cast<size_t>(config.channels * config.sampleRate * lengthS), 0)}
 {
 }
 
-AudioSignal::AudioSignal(const AudioSignalConfiguration& config, AudioDataType&& data) : config{config}, data{data}
+AudioSignal::AudioSignal(const AudioSignalConfiguration& as_config, AudioDataType&& audio_data) : config{as_config}, data{audio_data}
 {
+}
+
+void biquad_2nd_order_df1_normalized(vector<SampleType>& data, double gain, double biquad_y0_factor,
+                                     double biquad_y1_factor)
+{
+    constexpr size_t NZEROS = 2;
+    constexpr size_t NPOLES = 2;
+
+    double biquad_x[NZEROS + 1]{};
+    double biquad_y[NPOLES + 1]{};
+
+    for (auto& sample : data) {
+        biquad_x[0] = biquad_x[1];
+        biquad_x[1] = biquad_x[2];
+        biquad_x[2] = sample / gain;
+        biquad_y[0] = biquad_y[1];
+        biquad_y[1] = biquad_y[2];
+        biquad_y[2] = (biquad_x[0] + biquad_x[2]) + 2 * biquad_x[1] + (biquad_y0_factor * biquad_y[0]) +
+                      (biquad_y1_factor * biquad_y[1]);
+        sample = static_cast<SampleType>(biquad_y[2]);
+    }
 }
 
 // Generated with http://www-users.cs.york.ac.uk/~fisher/mkfilter/ - no license given -
@@ -35,22 +58,10 @@ void AudioSignal::lowPass20KHz()
      *    Command line: /www/usr/fisher/helpers/mkfilter -Bu -Lp -o 2 -a 4.1666666667e-01
      * 0.0000000000e+00 -l */
 
-    constexpr size_t NZEROS = 2;
-    constexpr size_t NPOLES = 2;
-    constexpr double GAIN   = 1.450734152e+00;
-
-    double xv[NZEROS + 1]{};
-    double yv[NPOLES + 1]{};
-
-    for (auto& sample : data) {
-        xv[0]  = xv[1];
-        xv[1]  = xv[2];
-        xv[2]  = sample / GAIN;
-        yv[0]  = yv[1];
-        yv[1]  = yv[2];
-        yv[2]  = (xv[0] + xv[2]) + 2 * xv[1] + (-0.4775922501 * yv[0]) + (-1.2796324250 * yv[1]);
-        sample = static_cast<SampleType>(yv[2]);
-    }
+    constexpr double GAIN             = 1.450734152e+00;
+    constexpr double biquad_y0_factor = -0.4775922501;
+    constexpr double biquad_y1_factor = -1.2796324250;
+    biquad_2nd_order_df1_normalized(data, GAIN, biquad_y0_factor, biquad_y1_factor);
 }
 // Generated with http://www-users.cs.york.ac.uk/~fisher/mkfilter/ - no license given -
 // and adjusted to work as a standalone function.
@@ -59,23 +70,10 @@ void AudioSignal::highPass20Hz()
     /* Digital filter designed by mkfilter/mkshape/gencode   A.J. Fisher
      *    Command line: /www/usr/fisher/helpers/mkfilter -Bu -Lp -o 2 -a 4.1666666667e-01
      * 0.0000000000e+00 -l */
-
-    constexpr size_t NZEROS = 2;
-    constexpr size_t NPOLES = 2;
-    constexpr double GAIN   = 1.001852916e+00;
-
-    double xv[NZEROS + 1]{};
-    double yv[NPOLES + 1]{};
-
-    for (auto& sample : data) {
-        xv[0]  = xv[1];
-        xv[1]  = xv[2];
-        xv[2]  = sample / GAIN;
-        yv[0]  = yv[1];
-        yv[1]  = yv[2];
-        yv[2]  = (xv[0] + xv[2]) - 2 * xv[1] + (-0.9963044430 * yv[0]) + (1.9962976018 * yv[1]);
-        sample = static_cast<SampleType>(yv[2]);
-    }
+    constexpr double GAIN             = 1.001852916e+00;
+    constexpr double biquad_y0_factor = -0.9963044430;
+    constexpr double biquad_y1_factor = 1.9962976018;
+    biquad_2nd_order_df1_normalized(data, GAIN, biquad_y0_factor, biquad_y1_factor);
 }
 
 /// Fade a signal in and out
@@ -190,11 +188,12 @@ AudioSignal operator-(AudioSignal minuend, const AudioSignal& subtrahend)
 
 AudioSignal generateTone(const AudioSignalConfiguration& audioConfig, const ToneConfiguration& toneConfig)
 {
-    auto sampleRate   = audioConfig.sampleRate;
-    auto lengthS      = toneConfig.length;
-    auto freq         = toneConfig.frequency;
-    auto addHarmonics = toneConfig.overtones;
-    auto samples      = static_cast<size_t>(floor(sampleRate * lengthS));
+    const auto sampleRate   = audioConfig.sampleRate;
+    const auto lengthS      = toneConfig.length;
+    const auto freq         = toneConfig.frequency;
+    const auto addHarmonics = toneConfig.overtones;
+    const auto samples      = static_cast<size_t>(floor(sampleRate * lengthS));
+    const auto gainFactor   = 0.5;
 
     AudioDataType data;
     data.reserve(samples);
@@ -203,14 +202,14 @@ AudioSignal generateTone(const AudioSignalConfiguration& audioConfig, const Tone
         double sample = sin(samIdx * 2 * numbers::pi * freq / sampleRate);
 
         // add harmonics
-        double harmonicGainFactor = 0.5;
-        double gain               = 0.5;
+        const double harmonicGainFactor = gainFactor;
+        double gain                     = harmonicGainFactor;
         for (size_t harmonic = 0; harmonic < addHarmonics; ++harmonic) {
             gain *= harmonicGainFactor;
             sample += gain * sin(samIdx * 2 * numbers::pi * (harmonic + 2) * freq / sampleRate);
         }
         for (size_t channelIdx = 0; channelIdx < audioConfig.channels; ++channelIdx) {
-            data.emplace_back(static_cast<SampleType>(0.5 * sample));
+            data.emplace_back(static_cast<SampleType>(gainFactor * sample));
         }
     }
     return AudioSignal(audioConfig, std::move(data));
@@ -218,7 +217,7 @@ AudioSignal generateTone(const AudioSignalConfiguration& audioConfig, const Tone
 
 double halfToneOffset(double baseFreq, size_t offset)
 {
-    return baseFreq * pow(pow(2, 1 / 12.0), offset);
+    return baseFreq * pow(pow(2, 1.0 / halfStepsInOctave), offset);
 };
 
 

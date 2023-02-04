@@ -59,7 +59,7 @@ public:
 };
 
 AudioSignal operator+(AudioSignal summand1, const AudioSignal& summand);
-AudioSignal operator-(AudioSignal minuend, const AudioSignal& summand);
+AudioSignal operator-(AudioSignal minuend, const AudioSignal& subtrahend);
 
 
 /// Generate specific tone as an AudioSignal
