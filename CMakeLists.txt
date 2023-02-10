@@ -37,7 +37,7 @@ enable_testing()
 FetchContent_Declare(
     googletest
     DOWNLOAD_EXTRACT_TIMESTAMP true
-    URL https://github.com/google/googletest/archive/release-1.12.1.tar.gz
+    URL https://github.com/google/googletest/archive/refs/tags/v1.13.0.tar.gz
 )
 FetchContent_MakeAvailable(googletest)
 
