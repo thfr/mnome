@@ -6,9 +6,9 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 include(FetchContent)
 # https://github.com/mackron/miniaudio/
 FetchContent_Declare(
-    miniaudio # version 0.11.11
+    miniaudio # version 0.11.14
     DOWNLOAD_EXTRACT_TIMESTAMP true
-    URL "https://github.com/mackron/miniaudio/archive/a0dc1037f99a643ff5fad7272cd3d6461f2d63fa.zip"
+    URL "https://github.com/mackron/miniaudio/archive/9a7663496fc06f7a9439c752fd7666ca93328c20.zip"
 )
 FetchContent_GetProperties(miniaudio)
 if(NOT miniaudio_POPULATED)

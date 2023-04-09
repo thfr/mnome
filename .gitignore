@@ -1,1 +1,16 @@
+# build folders
 build*/*
+
+# subprojects folder contains cached files
+subprojects/*
+subprojects/packagecache
+
+# Make files should be checked if is used
+Makefile
+
+# clangd files
+compile_commands.json
+.cache/
+
+# (n)vim session files
+Session.vim
