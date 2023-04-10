@@ -15,6 +15,14 @@ set(CMAKE_CXX_CLANG_TIDY clang-tidy -checks=-*,readability-*)
 
 add_subdirectory(cmake/miniaudio)
 
+FetchContent_Declare(
+    doctest
+    DOWNLOAD_EXTRACT_TIMESTAMP true
+    URL https://github.com/doctest/doctest/archive/refs/tags/v2.4.11.tar.gz
+)
+FetchContent_MakeAvailable(doctest)
+include_directories(${doctest_SOURCE_DIR}/doctest)
+
 set(SOURCE_FILES
     ./src/AudioSignal.cpp
     ./src/AudioSignal.hpp
@@ -26,32 +34,13 @@ set(SOURCE_FILES
     ./src/Repl.hpp
 )
 
-# testable library
-add_library(mnomelib STATIC ${SOURCE_FILES})
-target_link_libraries(mnomelib PUBLIC miniaudio_STATIC)
-
-add_executable(mnome ./src/main.cpp)
-target_link_libraries(mnome mnomelib)
+add_executable(mnome ./src/main.cpp ${SOURCE_FILES})
+target_link_libraries(mnome PUBLIC miniaudio_STATIC doctest)
+target_compile_definitions(mnome PUBLIC DOCTEST_CONFIG_DISABLE=1)
 
 enable_testing()
-FetchContent_Declare(
-    googletest
-    DOWNLOAD_EXTRACT_TIMESTAMP true
-    URL https://github.com/google/googletest/archive/refs/tags/v1.13.0.tar.gz
-)
-FetchContent_MakeAvailable(googletest)
+include(${doctest_SOURCE_DIR}/scripts/cmake/doctest.cmake)
 
-add_executable(ReplTest ./test/ReplTest.cpp)
-target_link_libraries(ReplTest gtest gtest_main mnomelib)
-target_include_directories(ReplTest PRIVATE ./src/)
-add_test(NAME ReplTest COMMAND ReplTest)
-
-add_executable(AudioSignalTest ./test/AudioSignalTest.cpp)
-target_link_libraries(AudioSignalTest gtest gtest_main mnomelib)
-target_include_directories(AudioSignalTest PRIVATE ./src/)
-add_test(NAME AudioSignalTest COMMAND AudioSignalTest)
-
-add_executable(MnomeTest ./test/MnomeTest.cpp)
-target_link_libraries(MnomeTest gtest gtest_main mnomelib)
-target_include_directories(MnomeTest PRIVATE ./src/)
-add_test(NAME MnomeTest COMMAND MnomeTest)
+add_executable(test-mnome src/doctestmain.cpp ${SOURCE_FILES})
+target_link_libraries(test-mnome PUBLIC miniaudio_STATIC doctest)
+doctest_discover_tests(test-mnome)

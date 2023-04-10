@@ -2,8 +2,11 @@
 #include "AudioSignal.hpp"
 #include "BeatPlayer.hpp"
 
+#include "doctest.h"
+
 #include <cmath>
 #include <cstddef>
+#include <sstream>
 
 using namespace std;
 
@@ -123,5 +126,39 @@ bool Mnome::isPlaying() const
 {
     return bp.isRunning();
 }
+
+// NOLINTNEXTLINE
+TEST_CASE("MnomeTest - ChangeSettingsDuringPlayback")
+{
+    const auto waitTime = std::chrono::milliseconds(10);
+    stringstream stringStream;
+
+    streambuf* cinbuf = cin.rdbuf();
+    cin.rdbuf(stringStream.rdbuf());
+    Mnome app{};
+    CHECK_NOTHROW(app.startPlayback());
+    CHECK(app.isPlaying());
+
+    this_thread::sleep_for(waitTime);
+
+    CHECK_NOTHROW(app.stopPlayback());
+    CHECK_NOTHROW(app.startPlayback());
+
+    this_thread::sleep_for(waitTime);
+
+    CHECK_NOTHROW(app.setBeatPattern("!+.+"));
+
+    this_thread::sleep_for(waitTime);
+
+    CHECK(app.isPlaying());
+    CHECK_NOTHROW(app.stop());
+
+    this_thread::sleep_for(waitTime);
+
+    stringStream << "exit\n";
+    stringStream.flush();
+    cin.rdbuf(cinbuf);
+}
+
 
 }  // namespace mnome

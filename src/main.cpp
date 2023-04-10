@@ -1,5 +1,4 @@
 /// Mnome - A metronome program
-
 #include "Mnome.hpp"
 
 #include <cmath>
@@ -18,7 +17,7 @@ unique_ptr<mnome::Mnome> App;
 
 void shutDownAppHandler(int signalCode)
 {
-    (void) signalCode;
+    (void)signalCode;
     lock_guard<mutex> lockGuard{AppMutex};
     if (App) {
         App->stop();

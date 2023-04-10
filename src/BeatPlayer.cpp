@@ -3,7 +3,7 @@
 /// Plays a beat
 
 #include "BeatPlayer.hpp"
-#include "miniaudio.h"
+#include <miniaudio.h>
 
 #include <algorithm>
 #include <atomic>
@@ -25,8 +25,8 @@ using namespace std;
 
 
 constexpr double FADE_MIN_PERCENTAGE     = 0.30;
-constexpr double FADE_MIN_TIME           = 0.025;  // [s]
-constexpr size_t PLAYBACK_MIN_ALSA_WRITE = 100;    // [ms]
+constexpr double FADE_MIN_TIME           = 0.025;   // [s]
+constexpr size_t PLAYBACK_MIN_ALSA_WRITE = 100;     // [ms]
 constexpr size_t PLAYBACK_RATE           = 48'000;  // [Hz]
 
 

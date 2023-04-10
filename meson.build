@@ -4,8 +4,12 @@ project('mnome', 'cpp',
 
 miniaudio = subproject('miniaudio')
 miniaudio_dep = miniaudio.get_variable('miniaudio_dep')
+doctest = subproject('doctest')
+doctest_dep = doctest.get_variable('doctest_dep')
+threads_dep = dependency('threads')
 
-mnome_lib = static_library('libmnome',
+mnome_lib = executable('mnome',
+  'src/main.cpp',
   'src/AudioSignal.cpp',
   'src/AudioSignal.hpp',
   'src/BeatPlayer.cpp',
@@ -14,48 +18,25 @@ mnome_lib = static_library('libmnome',
   'src/Repl.hpp',
   'src/Mnome.cpp',
   'src/Mnome.hpp',
-  dependencies: [miniaudio_dep],
+  dependencies: [miniaudio_dep, doctest_dep, threads_dep],
   implicit_include_directories: true,
+  cpp_args: '-DDOCTEST_CONFIG_DISABLE=1',
   )
 
-threads_dep = dependency('threads')
-
-mnome_exe = executable('mnome',
-  'src/main.cpp',
-  dependencies: [miniaudio_dep, threads_dep],
-  link_with: mnome_lib,
-  implicit_include_directories: true,
-  )
-
-gtest = subproject('gtest')
-gtest_dep = gtest.get_variable('gtest_main_dep')
-
-repl_test = executable(
-  'ReplTest',
-  files(['./test/ReplTest.cpp']),
-  dependencies : [gtest_dep],
-  link_with: mnome_lib,
-  include_directories: './src/',
-  )
-
-test('ReplTest', repl_test)
 
 mnome_test = executable(
-  'MnomeTest',
-  files(['./test/MnomeTest.cpp']),
-  dependencies : [gtest_dep, miniaudio_dep],
-  link_with: mnome_lib,
+  'mnometest',
+  'src/doctestmain.cpp',
+  'src/AudioSignal.cpp',
+  'src/AudioSignal.hpp',
+  'src/BeatPlayer.cpp',
+  'src/BeatPlayer.hpp',
+  'src/Repl.cpp',
+  'src/Repl.hpp',
+  'src/Mnome.cpp',
+  'src/Mnome.hpp',
+  dependencies : [doctest_dep, miniaudio_dep, threads_dep],
   include_directories: './src/',
   )
 
 test('MnomeTest', mnome_test)
-
-audiosignal_test = executable(
-  'AudioSignalTest',
-  files(['./test/AudioSignalTest.cpp']),
-  dependencies : [gtest_dep],
-  link_with: mnome_lib,
-  include_directories: './src/',
-  )
-
-test('AudioSignalTest', audiosignal_test)

@@ -4,6 +4,9 @@
 
 #include "Repl.hpp"
 
+#include <doctest.h>
+#include <sstream>
+
 using namespace std;
 
 namespace mnome {
@@ -161,5 +164,34 @@ void Repl::printHelp(std::optional<std::string> arg)
         }
     }
 }
+
+TEST_CASE("ReplTest")
+{
+    std::vector<const char*> executedCommands;
+
+    const char* exit    = "exit";
+    const char* start   = "start";
+    const auto waitTime = chrono::milliseconds(5);
+
+    ReplCommandList commands;
+    commands.emplace(
+        exit, [&exit, &executedCommands](const std::optional<std::string>) { executedCommands.push_back(exit); });
+    commands.emplace(
+        start, [&start, &executedCommands](const std::optional<std::string>) { executedCommands.push_back(start); });
+
+    std::stringstream iStream;  // TODO does not work, fix it
+    std::stringstream oStream;
+    Repl dut(commands, iStream, oStream);
+
+    dut.start();
+    iStream << "exit\nstart\n";
+    iStream.sync();
+    this_thread::sleep_for(waitTime);
+    dut.stop();
+    dut.waitForStop();
+    CHECK_EQ(executedCommands[0], exit);
+    CHECK_EQ(executedCommands[1], start);
+}
+
 
 }  // namespace mnome
