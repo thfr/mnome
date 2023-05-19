@@ -4,6 +4,7 @@ build*/*
 # subprojects folder contains cached files
 subprojects/*
 !subprojects/*.wrap
+!subprojects/packagefiles
 
 # Make files should be checked if is used
 Makefile

@@ -1,5 +1,5 @@
 project('miniaudio', 'c',
-  version : '0.10.25',
+  version : '0.11.14',
   )
 
 cc = meson.get_compiler('c')

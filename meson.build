@@ -36,7 +36,7 @@ mnome_test = executable(
   'src/Mnome.cpp',
   'src/Mnome.hpp',
   dependencies : [doctest_dep, miniaudio_dep, threads_dep],
-  include_directories: './src/',
+  implicit_include_directories: true,
   )
 
 test('MnomeTest', mnome_test)
