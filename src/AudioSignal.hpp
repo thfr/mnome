@@ -52,7 +52,7 @@ public:
 
     void resizeSamples(size_t numberSamples, SampleType value = 0);
 
-    bool isCompatible(const AudioSignal& other) const;
+    bool mixingPossibile(const AudioSignal& other) const;
 
     AudioSignal& operator+=(const AudioSignal& summand);
     AudioSignal& operator-=(const AudioSignal& summand);

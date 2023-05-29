@@ -4,6 +4,7 @@
 
 #include "AudioSignal.hpp"
 
+#include <array>
 #include <doctest.h>
 
 #include <algorithm>
@@ -38,8 +39,8 @@ void biquad_2nd_order_df1_normalized(vector<SampleType>& data, double gain, doub
     constexpr size_t NZEROS = 2;
     constexpr size_t NPOLES = 2;
 
-    double biquad_x[NZEROS + 1]{};
-    double biquad_y[NPOLES + 1]{};
+    std::array<double, NZEROS + 1> biquad_x{};
+    std::array<double, NPOLES + 1> biquad_y{};
 
     for (auto& sample : data) {
         biquad_x[0] = biquad_x[1];
@@ -135,14 +136,14 @@ void AudioSignal::resizeSamples(size_t numberSamples, SampleType value)
     data.resize(numberSamples, value);
 }
 
-bool AudioSignal::isCompatible(const AudioSignal& other) const
+bool AudioSignal::mixingPossibile(const AudioSignal& other) const
 {
     return this->config.sampleRate == other.config.sampleRate && this->config.channels == other.config.channels;
 }
 
 AudioSignal& AudioSignal::operator+=(const AudioSignal& summand)
 {
-    if (!this->isCompatible(summand)) {
+    if (!this->mixingPossibile(summand)) {
         throw std::exception();
     }
     size_t max_length = std::max(data.size(), summand.data.size());
@@ -157,7 +158,7 @@ AudioSignal& AudioSignal::operator+=(const AudioSignal& summand)
 
 AudioSignal& AudioSignal::operator-=(const AudioSignal& summand)
 {
-    if (!this->isCompatible(summand)) {
+    if (!this->mixingPossibile(summand)) {
         throw std::exception();
     }
     size_t max_length = std::max(data.size(), summand.data.size());
@@ -172,7 +173,7 @@ AudioSignal& AudioSignal::operator-=(const AudioSignal& summand)
 
 AudioSignal operator+(AudioSignal summand1, const AudioSignal& summand2)
 {
-    if (!summand1.isCompatible(summand2)) {
+    if (!summand1.mixingPossibile(summand2)) {
         throw std::exception();
     }
     summand1 += summand2;
@@ -181,7 +182,7 @@ AudioSignal operator+(AudioSignal summand1, const AudioSignal& summand2)
 
 AudioSignal operator-(AudioSignal minuend, const AudioSignal& subtrahend)
 {
-    if (!minuend.isCompatible(subtrahend)) {
+    if (!minuend.mixingPossibile(subtrahend)) {
         throw std::exception();
     }
     minuend -= subtrahend;
@@ -236,8 +237,8 @@ TEST_CASE("AudioSignalTest")
     sine440hzConfig.frequency = sineFreq;
     sine440hzConfig.length    = sineLength;
 
-    AudioSignal sine44hz1 = generateTone(audioConfig, sine440hzConfig);
-    AudioSignal op_plus   = sine44hz1 + sine44hz1;
+    AudioSignal sine440hz1 = generateTone(audioConfig, sine440hzConfig);
+    AudioSignal op_plus    = sine440hz1 + sine440hz1;
 
     CHECK_EQ(op_plus.getAudioData().size(), sine44hz1.getAudioData().size());
 
@@ -245,8 +246,8 @@ TEST_CASE("AudioSignalTest")
         CHECK_EQ(op_plus.getAudioData()[idx], 2 * sine44hz1.getAudioData()[idx]);
     }
 
-    op_plus -= sine44hz1;
-    op_plus -= sine44hz1;
+    op_plus -= sine440hz1;
+    op_plus -= sine440hz1;
 
     for (size_t idx = 0; idx < op_plus.getAudioData().size(); ++idx) {
         CHECK_EQ(op_plus.getAudioData()[idx], 0);
