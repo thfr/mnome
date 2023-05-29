@@ -18,7 +18,7 @@
 namespace mnome {
 
 using CommandFunction = std::function<void(const std::optional<std::string>)>;
-using ReplCommandList = std::unordered_map<std::string, CommandFunction>;
+using ReplCommandList = std::unordered_map<std::string_view, CommandFunction>;
 
 /// Read evaluate print loop
 class Repl

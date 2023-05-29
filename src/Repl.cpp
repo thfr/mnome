@@ -4,31 +4,32 @@
 
 #include "Repl.hpp"
 
+#include <cctype>
 #include <doctest.h>
 #include <sstream>
-
-using namespace std;
+#include <string_view>
 
 namespace mnome {
 
 /// Name of ENTER key within the list of commands
-std::string ENTER_KEY_NAME = "<ENTER KEY>";
+std::string_view ENTER_KEY_NAME = "<ENTER KEY>";
 
-/// Trim first spaces of a string
-/// \note see https://stackoverflow.com/a/217605
-static inline std::string& ltrim(std::string& input)
+/// Trim first spaces of a string_view
+static inline std::string_view& ltrim(std::string_view& input)
 {
-    input.erase(input.begin(),
-                find_if(input.begin(), input.end(), [](int character) { return 0 == isspace(character); }));
+    while (!input.empty() && 0 != std::isspace(input.front())) {
+        input.remove_prefix(1);
+    }
     return input;
 }
 
-/// Trim trailing spaces of a string
-/// \note see https://stackoverflow.com/a/217605
-static inline void rtrim(std::string& input)
+/// Trim trailing spaces of a string_view
+static inline std::string_view& rtrim(std::string_view& input)
 {
-    input.erase(find_if(input.rbegin(), input.rend(), [](int character) { return 0 == isspace(character); }).base(),
-                input.end());
+    while (!input.empty() && 0 != std::isspace(input.back())) {
+        input.remove_suffix(1);
+    }
+    return input;
 }
 
 
@@ -55,7 +56,7 @@ void Repl::setCommands(const ReplCommandList& cmds)
 void Repl::start()
 {
     waitForStop();
-    myThread = make_unique<thread>([this]() { this->run(); });
+    myThread = std::make_unique<std::thread>([this]() { this->run(); });
 }
 
 void Repl::stop()
@@ -81,10 +82,10 @@ void Repl::run()
 {
     while (!requestStop) {
         // prompt
-        outputStream << endl;
+        outputStream << std::endl;
         outputStream << "[mnome]: ";
 
-        string input;
+        std::string input;
         getline(inputStream, input);
 
         // catch ctrl+d
@@ -92,14 +93,18 @@ void Repl::run()
             break;
         }
 
-        rtrim(ltrim(input));
+        std::string_view inputSV{input};
 
-        size_t cmdSep = input.find(' ', 0);
+        inputSV = rtrim(ltrim(inputSV));
+
+        size_t cmdSep = inputSV.find(' ', 0);
 
         // find command and arguments in input
-        const string commandString = input.substr(0, cmdSep);
-        const auto args = (cmdSep != string::npos) ? optional<string>{input.substr(cmdSep + 1, string::npos)} : nullopt;
-        auto possibleCommand = commands.find(commandString);
+        const auto commandString = inputSV.substr(0, cmdSep);
+        const auto args          = (cmdSep != std::string_view::npos)
+                                       ? std::optional<std::string>{input.substr(cmdSep + 1, std::string::npos)}
+                                       : std::nullopt;
+        auto possibleCommand     = commands.find(commandString);
         if (end(commands) == possibleCommand) {
             // give standard implementations for help, exit and quit commands
             if (commandString == "help") {
@@ -109,8 +114,8 @@ void Repl::run()
                 stop();
             }
             else {
-                outputStream << "\"" << commandString << "\" is not a valid command" << endl;
-                printHelp(nullopt);
+                outputStream << "\"" << commandString << "\" is not a valid command" << std::endl;
+                printHelp(std::nullopt);
             }
             continue;
         }
@@ -119,8 +124,8 @@ void Repl::run()
             // execute command with parameters
             possibleCommand->second(args);
         }
-        catch (const exception& e) {
-            outputStream << "Could not get that, please try again" << endl;
+        catch (const std::exception& e) {
+            outputStream << "Could not get that, please try again" << std::endl;
             outputStream << e.what();
         }
     }
@@ -129,7 +134,7 @@ void Repl::run()
 
 void Repl::printHelp(std::optional<std::string> arg)
 {
-    auto displayCommandName = [](const string& cmd) -> const string& {
+    auto displayCommandName = [](const std::string_view& cmd) -> const std::string_view& {
         if (cmd.empty()) {
             return ENTER_KEY_NAME;
         }
@@ -140,7 +145,7 @@ void Repl::printHelp(std::optional<std::string> arg)
         const auto argString = arg.value();
         auto possibleCommand = commands.find(argString);
         if (end(commands) == possibleCommand) {
-            outputStream << "\"" << argString << "\" is not a valid command to show help for" << endl;
+            outputStream << "\"" << argString << "\" is not a valid command to show help for" << std::endl;
         }
         else {
             outputStream << "\"" << displayCommandName(possibleCommand->first)
@@ -157,10 +162,10 @@ void Repl::printHelp(std::optional<std::string> arg)
             while (++commandIter != end(commands)) {
                 outputStream << ", \"" << displayCommandName(commandIter->first) << "\"";
             }
-            outputStream << endl;
+            outputStream << std::endl;
         }
         else {
-            outputStream << "There are no commands defined, this REPL does nothing" << endl;
+            outputStream << "There are no commands defined, this REPL does nothing" << std::endl;
         }
     }
 }
@@ -171,7 +176,7 @@ TEST_CASE("ReplTest")
 
     const char* exit    = "exit";
     const char* start   = "start";
-    const auto waitTime = chrono::milliseconds(5);
+    const auto waitTime = std::chrono::milliseconds(5);
 
     ReplCommandList commands;
     commands.emplace(
@@ -179,18 +184,25 @@ TEST_CASE("ReplTest")
     commands.emplace(
         start, [&start, &executedCommands](const std::optional<std::string>) { executedCommands.push_back(start); });
 
-    std::stringstream iStream;  // TODO does not work, fix it
+    std::stringstream iStream;
     std::stringstream oStream;
     Repl dut(commands, iStream, oStream);
 
     dut.start();
-    iStream << "exit\nstart\n";
+    iStream << "\t exit   \t \n  \t start \t \n";
     iStream.sync();
-    this_thread::sleep_for(waitTime);
+    std::this_thread::sleep_for(waitTime);
+    CHECK(dut.isRunning());
     dut.stop();
     dut.waitForStop();
     CHECK_EQ(executedCommands[0], exit);
     CHECK_EQ(executedCommands[1], start);
+}
+
+TEST_CASE("String trimming")
+{
+    std::string_view testString = "\t \n bla \t \n";
+    CHECK_EQ(ltrim(rtrim(testString)), "bla");
 }
 
 

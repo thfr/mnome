@@ -114,8 +114,7 @@ void BeatPlayer::start()
     }
     const double lengthS = localBeat.length();
 
-    // Fade the beat in and out to avoid click/pop noises because of too sudden output value
-    // changes
+    // Fade the beat in and out to avoid click/pop noises because of too sudden amplitude changes
     const auto rampingSteps = (lengthS * FADE_MIN_PERCENTAGE < FADE_MIN_TIME)
                                   ? getNumbersOfSamples(lengthS * FADE_MIN_PERCENTAGE)
                                   : getNumbersOfSamples(FADE_MIN_TIME);
