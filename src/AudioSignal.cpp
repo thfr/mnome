@@ -240,10 +240,10 @@ TEST_CASE("AudioSignalTest")
     AudioSignal sine440hz1 = generateTone(audioConfig, sine440hzConfig);
     AudioSignal op_plus    = sine440hz1 + sine440hz1;
 
-    CHECK_EQ(op_plus.getAudioData().size(), sine44hz1.getAudioData().size());
+    CHECK_EQ(op_plus.getAudioData().size(), sine440hz1.getAudioData().size());
 
     for (size_t idx = 0; idx < op_plus.getAudioData().size(); ++idx) {
-        CHECK_EQ(op_plus.getAudioData()[idx], 2 * sine44hz1.getAudioData()[idx]);
+        CHECK_EQ(op_plus.getAudioData()[idx], 2 * sine440hz1.getAudioData()[idx]);
     }
 
     op_plus -= sine440hz1;

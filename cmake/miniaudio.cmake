@@ -1,24 +1,16 @@
-cmake_minimum_required(VERSION 3.5)
-project(Mnome-Miniaudio)
-
-set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
-
-include(FetchContent)
-# https://github.com/mackron/miniaudio/
-FetchContent_Declare(
-    miniaudio # version 0.11.16
-    DOWNLOAD_EXTRACT_TIMESTAMP true
-    URL "https://github.com/mackron/miniaudio/archive/ea205fb7b0b63613f7586a4082ec9c42a0381920.zip"
+CPMAddPackage(
+    NAME miniaudio
+    GIT_REPOSITORY https://github.com/mackron/miniaudio
+    # version 0.11.17
+    GIT_TAG d76b9a1ac424b5b259c2faeea0dc83d215df522a
+    DOWNLOAD_ONLY True
 )
-FetchContent_GetProperties(miniaudio)
-if(NOT miniaudio_POPULATED)
-    FetchContent_Populate(miniaudio)
-endif(NOT miniaudio_POPULATED)
 
 set(miniaudio_include_dir "${miniaudio_SOURCE_DIR}/extras/miniaudio_split/")
 set(miniaudio_sources ${miniaudio_SOURCE_DIR}/extras/miniaudio_split/miniaudio.c
                       ${miniaudio_SOURCE_DIR}/extras/miniaudio_split/miniaudio.h
 )
+
 add_library(miniaudio_STATIC STATIC ${miniaudio_sources})
 target_include_directories(miniaudio_STATIC PUBLIC ${miniaudio_include_dir})
 if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux")

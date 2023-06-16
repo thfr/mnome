@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.5)
 project(Mnome)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
-
 set(CMAKE_CXX_STANDARD 20)
 
 if(NOT MSVC)
@@ -13,14 +12,11 @@ endif(NOT MSVC)
 
 set(CMAKE_CXX_CLANG_TIDY clang-tidy -checks=-*,readability-*)
 
-add_subdirectory(cmake/miniaudio)
+include(cmake/CPM.cmake)
+include(cmake/miniaudio.cmake)
 
-FetchContent_Declare(
-    doctest
-    DOWNLOAD_EXTRACT_TIMESTAMP true
-    URL https://github.com/doctest/doctest/archive/refs/tags/v2.4.11.tar.gz
-)
-FetchContent_MakeAvailable(doctest)
+CPMAddPackage("gh:onqtam/doctest@2.4.11")
+
 include_directories(${doctest_SOURCE_DIR}/doctest)
 
 set(SOURCE_FILES
