@@ -1,0 +1,4 @@
+[wrap-git]
+url = https://github.com/daniele77/cli.git
+revision = 9e86142d8f4b5408296eb28411dfcf2abb21eace
+patch_directory = cli

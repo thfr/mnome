@@ -6,6 +6,8 @@ miniaudio = subproject('miniaudio')
 miniaudio_dep = miniaudio.get_variable('miniaudio_dep')
 doctest = subproject('doctest')
 doctest_dep = doctest.get_variable('doctest_dep')
+cli = subproject('cli')
+cli_dep = cli.get_variable('cli_dep')
 threads_dep = dependency('threads')
 
 mnome_lib = executable('mnome',
@@ -18,7 +20,7 @@ mnome_lib = executable('mnome',
   'src/Repl.hpp',
   'src/Mnome.cpp',
   'src/Mnome.hpp',
-  dependencies: [miniaudio_dep, doctest_dep, threads_dep],
+  dependencies: [miniaudio_dep, doctest_dep, threads_dep, cli_dep],
   implicit_include_directories: true,
   cpp_args: '-DDOCTEST_CONFIG_DISABLE=1',
   )
@@ -35,7 +37,7 @@ mnome_test = executable(
   'src/Repl.hpp',
   'src/Mnome.cpp',
   'src/Mnome.hpp',
-  dependencies : [doctest_dep, miniaudio_dep, threads_dep],
+  dependencies : [doctest_dep, miniaudio_dep, threads_dep, cli_dep],
   implicit_include_directories: true,
   )
 

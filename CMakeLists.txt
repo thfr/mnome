@@ -13,6 +13,7 @@ endif(NOT MSVC)
 set(CMAKE_CXX_CLANG_TIDY clang-tidy -checks=-*,readability-*)
 
 include(cmake/CPM.cmake)
+include(cmake/cli.cmake)
 include(cmake/miniaudio.cmake)
 
 CPMAddPackage("gh:onqtam/doctest@2.4.11")
@@ -31,12 +32,12 @@ set(SOURCE_FILES
 )
 
 add_executable(mnome ./src/main.cpp ${SOURCE_FILES})
-target_link_libraries(mnome PUBLIC miniaudio_STATIC doctest)
+target_link_libraries(mnome PUBLIC miniaudio_STATIC doctest cli::cli)
 target_compile_definitions(mnome PUBLIC DOCTEST_CONFIG_DISABLE=1)
 
 enable_testing()
 include(${doctest_SOURCE_DIR}/scripts/cmake/doctest.cmake)
 
 add_executable(test-mnome src/doctestmain.cpp ${SOURCE_FILES})
-target_link_libraries(test-mnome PUBLIC miniaudio_STATIC doctest)
+target_link_libraries(test-mnome PUBLIC miniaudio_STATIC doctest cli::cli)
 doctest_discover_tests(test-mnome)
