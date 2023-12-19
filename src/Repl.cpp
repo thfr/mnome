@@ -102,10 +102,12 @@ void Repl::run()
         // find command and arguments in input
         const auto commandString = inputSV.substr(0, cmdSep);
         const auto args          = (cmdSep != std::string_view::npos)
-                                       ? std::optional<std::string>{input.substr(cmdSep + 1, std::string::npos)}
+                                       ? std::optional{input.substr(cmdSep + 1, std::string::npos)}
                                        : std::nullopt;
         auto possibleCommand     = commands.find(commandString);
-        if (end(commands) == possibleCommand) {
+
+        // handle command not found
+        if (std::end(commands) == possibleCommand) {
             // give standard implementations for help, exit and quit commands
             if (commandString == "help") {
                 printHelp(args);
@@ -120,8 +122,8 @@ void Repl::run()
             continue;
         }
 
+        // execute command with parameters
         try {
-            // execute command with parameters
             possibleCommand->second(args);
         }
         catch (const std::exception& e) {

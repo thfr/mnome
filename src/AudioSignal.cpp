@@ -230,12 +230,15 @@ TEST_CASE("AudioSignalTest")
     const auto channels   = 1;
     const auto sineFreq   = 440;
     const auto sineLength = 0.1;
-    AudioSignalConfiguration audioConfig;
-    audioConfig.sampleRate = sampleRate;
-    audioConfig.channels   = channels;
-    ToneConfiguration sine440hzConfig;
-    sine440hzConfig.frequency = sineFreq;
-    sine440hzConfig.length    = sineLength;
+    AudioSignalConfiguration audioConfig{
+        .sampleRate = sampleRate,
+        .channels   = channels,
+    };
+    ToneConfiguration sine440hzConfig{
+        .length    = sineLength,
+        .frequency = sineFreq,
+        .overtones = 0,
+    };
 
     AudioSignal sine440hz1 = generateTone(audioConfig, sine440hzConfig);
     AudioSignal op_plus    = sine440hz1 + sine440hz1;

@@ -22,9 +22,10 @@ Mnome::Mnome()
     const double accentuatedBeatHz = halfToneOffset(normalBeatHz, QUINT_HALFSTEPS);  // base tone + quint
     constexpr double beatDuration  = 0.05;                                           // [s]
     constexpr uint8_t overtones    = 1;
-    AudioSignalConfiguration audioConfig{PLAYBACK_RATE, 1};
-    ToneConfiguration toneConfigNormal{beatDuration, normalBeatHz, overtones};
-    ToneConfiguration toneConfigAccentuated{beatDuration, accentuatedBeatHz, overtones};
+    const AudioSignalConfiguration audioConfig{.sampleRate = PLAYBACK_RATE, .channels = 1};
+    const ToneConfiguration toneConfigNormal{.length = beatDuration, .frequency = normalBeatHz, .overtones = overtones};
+    const ToneConfiguration toneConfigAccentuated{
+        .length = beatDuration, .frequency = accentuatedBeatHz, .overtones = overtones};
 
     // generate the beat
     const auto accentuatedBeat = generateTone(audioConfig, toneConfigAccentuated);
