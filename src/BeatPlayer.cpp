@@ -9,7 +9,6 @@
 #include <atomic>
 #include <bits/chrono.h>
 #include <cassert>
-#include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -17,7 +16,9 @@
 #include <memory>
 #include <mutex>
 #include <numbers>
+#include <print>
 #include <sstream>
+#include <string_view>
 #include <vector>
 
 
@@ -35,7 +36,7 @@ namespace mnome {
 
 /// Return the time it takes to playback a number of samples
 /// \param[in]  samples  number of samples
-double getDuration(size_t samples)
+auto getDuration(size_t samples) -> double
 {
     return static_cast<double>(samples) / PLAYBACK_RATE;
 }
@@ -44,40 +45,37 @@ double getDuration(size_t samples)
 /// Return the time it takes to playback a number of samples
 /// \param[in]  time  time in seconds
 /// \return     samples  number of samples that resemble \p time samples
-size_t getNumbersOfSamples(double time)
+auto getNumbersOfSamples(double time) -> size_t
 {
     return static_cast<size_t>(round(time * PLAYBACK_RATE));
 }
 
 
-vector<int16_t> generateTone(const double freq, const double lengthS, const size_t addHarmonics)
+auto generateTone(ToneConfiguration tone) -> vector<int16_t>
 {
-    auto samples = static_cast<size_t>(floor(PLAYBACK_RATE * lengthS));
+    auto samples = static_cast<size_t>(floor(PLAYBACK_RATE * tone.length));
 
     vector<int16_t> data;
     data.reserve(samples);
 
     for (size_t samIdx = 0; samIdx < samples; samIdx++) {
-        double sample = sin(samIdx * 2 * numbers::pi * freq / PLAYBACK_RATE);
+        double sample = sin(static_cast<double>(samIdx * 2) * numbers::pi * tone.frequency / PLAYBACK_RATE);
 
         // add harmonics
         constexpr double harmonicGain = 0.5;
         constexpr double initialGain  = 0.5;
         constexpr double volume       = 0.5;
-        double gain                   = initialGain;
-        for (size_t harmonic = 0; harmonic < addHarmonics; ++harmonic) {
+        double           gain         = initialGain;
+        for (size_t harmonic = 0; harmonic < tone.overtones; ++harmonic) {
             gain *= harmonicGain;
-            sample += gain * sin(samIdx * 2 * numbers::pi * (harmonic + 2) * freq / PLAYBACK_RATE);
+            sample += gain * sin(static_cast<double>(samIdx * 2 * (harmonic + 2)) * numbers::pi * tone.frequency /
+                                 PLAYBACK_RATE);
         }
         data.emplace_back(static_cast<int16_t>(INT16_MAX * volume * sample));
     }
     return data;
 }
 
-
-BeatPlayer::BeatPlayer() : beatRate(DEFAULT_BPM)
-{
-}
 
 BeatPlayer::~BeatPlayer()
 {
@@ -89,27 +87,27 @@ void BeatPlayer::start()
 {
     lock_guard<recursive_mutex> guard(setterMutex);
     if (isRunning()) {
-        cout << "Error: BeatPlayer is already running, but was started again" << endl;
+        cout << "Error: BeatPlayer is already running, but was started again\n";
         return;
     }
     if (!beat || !accentuatedBeat) {
-        cout << "Error: No beat audio signal has been set" << endl;
+        cout << "Error: No beat audio signal has been set\n";
     }
     auto localBeat            = AudioSignal(*beat);
     auto localAccentuatedBeat = AudioSignal(*accentuatedBeat);
     playBackBuffer.clear();
 
-    const double beatIntervalLength  = static_cast<double>(beatRate / 60.0);
-    const size_t beatIntervalSamples = static_cast<size_t>(floor(1.0 / beatIntervalLength * PLAYBACK_RATE));
-    auto pause                       = AudioSignal(AudioSignalConfiguration{PLAYBACK_RATE, 1}, beatIntervalLength);
+    const double beatIntervalLength  = static_cast<double>(beatRate) / 60.0;
+    const auto   beatIntervalSamples = static_cast<size_t>(floor(1.0 / beatIntervalLength * PLAYBACK_RATE));
+    auto pause = AudioSignal(AudioSignalConfiguration{.sampleRate = PLAYBACK_RATE, .channels = 1}, beatIntervalLength);
 
     const auto& pattern = beatPattern.getBeatPattern();
 
     if (0 == localBeat.numberSamples()) {
-        cout << "Warning: the beat is silence, you will not hear anything." << endl;
+        cout << "Warning: the beat is silence, you will not hear anything.\n";
     }
     if (pattern.empty()) {
-        cout << "Not playing, beat pattern is empty" << endl;
+        cout << "Not playing, beat pattern is empty\n";
         return;
     }
     const double lengthS = localBeat.length();
@@ -121,7 +119,7 @@ void BeatPlayer::start()
 
     // Since fadeInOut only uses the first x and last y samples,
     // make sure not to fade out zero values
-    auto adjustBuffer = [&beatIntervalSamples, &rampingSteps](AudioSignal& signal) {
+    auto adjustBuffer = [&beatIntervalSamples, &rampingSteps](AudioSignal& signal) -> void {
         if (signal.numberSamples() > beatIntervalSamples) {
             signal.resizeSamples(beatIntervalSamples, 0);
             signal.fadeInOut(rampingSteps, rampingSteps);
@@ -155,14 +153,14 @@ void BeatPlayer::start()
                 copy(begin(localBeat.getAudioData()), end(localBeat.getAudioData()), playBackBufferIterator);
             break;
         case BeatType::pause:
-            cout << "pause is inserted" << endl;
+            cout << "pause is inserted\n";
             playBackBufferIterator =
                 copy(begin(pause.getAudioData()), end(pause.getAudioData()), playBackBufferIterator);
             break;
         }
     }
 
-    cout << "Playing " << beatPattern.toString() << " at " << beatRate << " bpm" << endl;
+    cout << std::format("Playing {} at {} bpm\n", beatPattern.toString(), beatRate);
 
     startAudio();
 }
@@ -170,7 +168,7 @@ void BeatPlayer::start()
 
 void miniaudio_data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount)
 {
-    ma_audio_buffer* buffer = (ma_audio_buffer*)pDevice->pUserData;
+    auto* buffer = static_cast<ma_audio_buffer*>(pDevice->pUserData);
     if (buffer == nullptr) {
         cout << "Buffer is empty\n";
         cout.flush();
@@ -188,9 +186,12 @@ void BeatPlayer::startAudio()
         cout << "Audio playback was started though it is already running\n";
         return;
     }
-    running = true;
-    ma_result result;
-    result = ma_context_init(nullptr, 0, nullptr, &context);
+    running          = true;
+    ma_result result = ma_context_init(nullptr, 0, nullptr, &context);
+    if (result != MA_SUCCESS) {
+        std::println("Error: mini audio context failed to initialize");
+        return;
+    }
 
     ma_format sample_format = ma_format_f32;
 
@@ -226,7 +227,7 @@ void BeatPlayer::stop()
 {
     lock_guard<recursive_mutex> lockGuard(setterMutex);
     if (isRunning()) {
-        cout << "Stopping playback" << endl;
+        cout << "Stopping playback\n";
         ma_device_uninit(&device);
         ma_audio_buffer_uninit(&buf);
         ma_context_uninit(&context);
@@ -250,7 +251,7 @@ void BeatPlayer::setBPM(size_t bpm)
     restart();
 }
 
-size_t BeatPlayer::getBPM() const
+auto BeatPlayer::getBPM() const -> size_t
 {
     return beatRate;
 }
@@ -276,22 +277,21 @@ void BeatPlayer::setAccentuatedPattern(const MetronomeBeats& pattern)
     restart();
 }
 
-bool BeatPlayer::isRunning() const
+auto BeatPlayer::isRunning() const -> bool
 {
     return running;
 }
 
 
-MetronomeBeats::MetronomeBeats(const std::string& strPattern)
+MetronomeBeats::MetronomeBeats(std::string_view strPattern)
 {
     fromString(strPattern);
 }
-MetronomeBeats::MetronomeBeats(const BeatPatternType& otherPattern)
+MetronomeBeats::MetronomeBeats(BeatPatternType otherPattern) : pattern(std::move(otherPattern))
 {
-    pattern = otherPattern;
 }
 
-void MetronomeBeats::fromString(const std::string& strPattern)
+void MetronomeBeats::fromString(string_view strPattern)
 {
     pattern.clear();
     for (const char& character : strPattern) {
@@ -313,7 +313,7 @@ void MetronomeBeats::fromString(const std::string& strPattern)
     }
 }
 
-std::string MetronomeBeats::toString() const
+auto MetronomeBeats::toString() const -> std::string
 {
     std::stringstream sStream;
     for (const auto& type : pattern) {
@@ -322,7 +322,7 @@ std::string MetronomeBeats::toString() const
     return sStream.str();
 }
 
-const std::vector<mnome::BeatType>& MetronomeBeats::getBeatPattern() const
+auto MetronomeBeats::getBeatPattern() const -> const std::vector<mnome::BeatType>&
 {
     return pattern;
 }

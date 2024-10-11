@@ -9,11 +9,9 @@
 
 #include <algorithm>
 #include <cmath>
-#include <cstdbool>
 #include <cstddef>
 #include <cstdint>
 #include <exception>
-#include <limits>
 #include <numbers>
 
 
@@ -36,8 +34,8 @@ AudioSignal::AudioSignal(const AudioSignalConfiguration& as_config, AudioDataTyp
 void biquad_2nd_order_df1_normalized(vector<SampleType>& data, double gain, double biquad_y0_factor,
                                      double biquad_y1_factor)
 {
-    constexpr size_t NZEROS = 2;
-    constexpr size_t NPOLES = 2;
+    constexpr const size_t NZEROS = 2;
+    constexpr const size_t NPOLES = 2;
 
     std::array<double, NZEROS + 1> biquad_x{};
     std::array<double, NPOLES + 1> biquad_y{};
@@ -48,9 +46,9 @@ void biquad_2nd_order_df1_normalized(vector<SampleType>& data, double gain, doub
         biquad_x[2] = sample / gain;
         biquad_y[0] = biquad_y[1];
         biquad_y[1] = biquad_y[2];
-        biquad_y[2] = (biquad_x[0] + biquad_x[2]) + 2 * biquad_x[1] + (biquad_y0_factor * biquad_y[0]) +
+        biquad_y[2] = (biquad_x[0] + biquad_x[2]) + (2 * biquad_x[1]) + (biquad_y0_factor * biquad_y[0]) +
                       (biquad_y1_factor * biquad_y[1]);
-        sample = static_cast<SampleType>(biquad_y[2]);
+        sample      = static_cast<SampleType>(biquad_y[2]);
     }
 }
 
@@ -62,9 +60,9 @@ void AudioSignal::lowPass20KHz()
      *    Command line: /www/usr/fisher/helpers/mkfilter -Bu -Lp -o 2 -a 4.1666666667e-01
      * 0.0000000000e+00 -l */
 
-    constexpr double GAIN             = 1.450734152e+00;
-    constexpr double biquad_y0_factor = -0.4775922501;
-    constexpr double biquad_y1_factor = -1.2796324250;
+    constexpr const double GAIN             = 1.450734152e+00;
+    constexpr const double biquad_y0_factor = -0.4775922501;
+    constexpr const double biquad_y1_factor = -1.2796324250;
     biquad_2nd_order_df1_normalized(data, GAIN, biquad_y0_factor, biquad_y1_factor);
 }
 // Generated with http://www-users.cs.york.ac.uk/~fisher/mkfilter/ - no license given -
@@ -207,7 +205,7 @@ AudioSignal generateTone(const AudioSignalConfiguration& audioConfig, const Tone
 
         // add harmonics
         const double harmonicGainFactor = gainFactor;
-        double gain                     = harmonicGainFactor;
+        double       gain               = harmonicGainFactor;
         for (size_t harmonic = 0; harmonic < addHarmonics; ++harmonic) {
             gain *= harmonicGainFactor;
             sample += gain * sin(samIdx * 2 * numbers::pi * (harmonic + 2) * freq / sampleRate);
@@ -230,6 +228,7 @@ TEST_CASE("AudioSignalTest")
     const auto channels   = 1;
     const auto sineFreq   = 440;
     const auto sineLength = 0.1;
+
     AudioSignalConfiguration audioConfig{
         .sampleRate = sampleRate,
         .channels   = channels,

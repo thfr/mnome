@@ -1,10 +1,10 @@
 [wrap-file]
-directory = doctest-2.4.11
-source_url = https://github.com/doctest/doctest/archive/refs/tags/v2.4.11.tar.gz
-source_filename = doctest-2.4.11.tar.gz
-source_hash = 632ed2c05a7f53fa961381497bf8069093f0d6628c5f26286161fbd32a560186
-source_fallback_url = https://github.com/mesonbuild/wrapdb/releases/download/doctest_2.4.11-1/doctest-2.4.11.tar.gz
-wrapdb_version = 2.4.11-1
+directory = doctest-2.5.1
+source_url = https://github.com/doctest/doctest/archive/refs/tags/v2.5.1.tar.gz
+source_filename = doctest-2.5.1.tar.gz
+source_hash = d4ebd26061d5a5d05355f52289c3f595d744aac8d70c547a012b2be96bc2f014
+source_fallback_url = https://wrapdb.mesonbuild.com/v2/doctest_2.5.1-1/get_source/doctest-2.5.1.tar.gz
+wrapdb_version = 2.5.1-1
 
 [provide]
 dependency_names = doctest

@@ -1,8 +1,8 @@
 CPMAddPackage(
     NAME miniaudio
     GIT_REPOSITORY https://github.com/mackron/miniaudio
-    # version 0.11.21
-    GIT_TAG 4a5b74bef029b3592c54b6048650ee5f972c1a48
+    # version 0.11.25 
+    GIT_TAG 9634bedb5b5a2ca38c1ee7108a9358a4e233f14d
     DOWNLOAD_ONLY True
 )
 

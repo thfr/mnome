@@ -4,13 +4,18 @@
 
 #include "doctest.h"
 
-#include <cmath>
 #include <cstddef>
+#include <format>
+#include <print>
 #include <sstream>
+#include <string_view>
+#include <utility>
 
 using namespace std;
 
 namespace mnome {
+using std::string_view;
+
 
 constexpr size_t PLAYBACK_RATE    = 48'000;  // [Hz]
 constexpr double TONE_A1_BASEFREQ = 440;     // [Hz]
@@ -18,16 +23,28 @@ constexpr size_t QUINT_HALFSTEPS  = 7;
 
 Mnome::Mnome()
 {
-    const double normalBeatHz      = halfToneOffset(TONE_A1_BASEFREQ, 2);            // base tone = B
-    const double accentuatedBeatHz = halfToneOffset(normalBeatHz, QUINT_HALFSTEPS);  // base tone + quint
-    constexpr double beatDuration  = 0.05;                                           // [s]
-    constexpr uint8_t overtones    = 1;
-    const AudioSignalConfiguration audioConfig{.sampleRate = PLAYBACK_RATE, .channels = 1};
-    const ToneConfiguration toneConfigNormal{.length = beatDuration, .frequency = normalBeatHz, .overtones = overtones};
-    const ToneConfiguration toneConfigAccentuated{
-        .length = beatDuration, .frequency = accentuatedBeatHz, .overtones = overtones};
+    // generate tone configurations
+    const auto     normalBeatHz      = halfToneOffset(TONE_A1_BASEFREQ, 2);            // base tone = B
+    const auto     accentuatedBeatHz = halfToneOffset(normalBeatHz, QUINT_HALFSTEPS);  // base tone + quint
+    constexpr auto beatDuration      = 0.05;                                           // [s]
+    constexpr auto overtones         = 1;
+
+    const auto toneConfigNormal = ToneConfiguration{
+        .length    = beatDuration,
+        .frequency = normalBeatHz,
+        .overtones = overtones,
+    };
+    const auto toneConfigAccentuated = ToneConfiguration{
+        .length    = beatDuration,
+        .frequency = accentuatedBeatHz,
+        .overtones = overtones,
+    };
 
     // generate the beat
+    const auto audioConfig = AudioSignalConfiguration{
+        .sampleRate = PLAYBACK_RATE,
+        .channels   = 1,
+    };
     const auto accentuatedBeat = generateTone(audioConfig, toneConfigAccentuated);
     const auto normalBeat      = generateTone(audioConfig, toneConfigNormal);
 
@@ -37,14 +54,14 @@ Mnome::Mnome()
 
     // bind keywords to function callbacks
     ReplCommandList commands;
-    commands.emplace("exit", bind(&Mnome::stop, this));
-    commands.emplace("quit", bind(&Mnome::stop, this));
-    commands.emplace("start", bind(&Mnome::startPlayback, this));
-    commands.emplace("stop", bind(&Mnome::stopPlayback, this));
-    commands.emplace("bpm", bind(&Mnome::setBPM, this, std::placeholders::_1));
-    commands.emplace("pattern", bind(&Mnome::setBeatPattern, this, std::placeholders::_1));
+    commands.emplace("exit", [this](string_view) -> void { stop(); });
+    commands.emplace("quit", [this](string_view) -> void { stop(); });
+    commands.emplace("start", [this](string_view) -> void { startPlayback(); });
+    commands.emplace("stop", [this](string_view) -> void { stopPlayback(); });
+    commands.emplace("bpm", [this](string_view args) -> void { setBPM(args); });
+    commands.emplace("pattern", [this](string_view args) -> void { setBeatPattern(args); });
     // make ENTER start and stop
-    commands.emplace("", bind(&Mnome::togglePlayback, this));
+    commands.emplace("", [this](string_view) -> void { togglePlayback(); });
 
     repl.setCommands(commands);
     repl.start();
@@ -83,18 +100,17 @@ void Mnome::togglePlayback()
         bp.start();
     }
 }
-void Mnome::setBPM(const std::optional<std::string> args)
+void Mnome::setBPM(std::string_view args)
 {
-    auto displayHelp = []() { cout << "Command usage: bpm <number>" << endl; };
+    auto              displayHelp = []() -> void { cout << "Command usage: bpm <number>\n"; };
     lock_guard<mutex> lockGuard(cmdMtx);
-    if (args) {
-        const string bpmStr = args.value();
+    if (!args.empty()) {
         try {
-            size_t bpm = !bpmStr.empty() ? stoul(bpmStr) : DEFAULT_BPM;
+            size_t bpm = stoul(string(args));
             bp.setBPM(bpm);
         }
         catch (exception& e) {
-            cout << "Could get beats per minute from \"" << bpmStr << "\"" << endl;
+            std::println("Could get beats per minute from \"{}\"", args);
             displayHelp();
         };
     }
@@ -102,28 +118,28 @@ void Mnome::setBPM(const std::optional<std::string> args)
         displayHelp();
     }
 }
-void Mnome::setBeatPattern(const std::optional<std::string> args)
+void Mnome::setBeatPattern(std::string_view args)
 {
-    auto displayHelp = []() {
-        cout << "Command usage: pattern <pattern>" << endl;
-        cout << "  <pattern> must be in the form of `[!|+|.]*`" << endl;
-        cout << "  `!` = accentuated beat  `+` = normal beat  `.` = pause" << endl;
+    auto displayHelp = []() -> void {
+        cout << std::format("Command usage: pattern <pattern>\n"
+                            "  <pattern> must be in the form of `[{0}|{1}|{2}]*`\n"
+                            "  `{0}` = accentuated beat  `{1}` = normal beat  `{2}` = pause\n",
+                            BeatType::accent, BeatType::accent, BeatType::pause);
     };
     lock_guard<mutex> lockGuard(cmdMtx);
-    if (args) {
-        const string patternStr = args.value();
-        if ((patternStr.find('*') == string::npos) && (patternStr.find('+') == string::npos)) {
+    if (!args.empty()) {
+        if (args.contains(to_underlying(BeatType::accent)) && args.contains(to_underlying(BeatType::beat))) {
             displayHelp();
             return;
         }
-        bp.setAccentuatedPattern(MetronomeBeats(patternStr));
+        bp.setAccentuatedPattern(MetronomeBeats(args));
     }
     else {
         displayHelp();
     }
 }
 
-bool Mnome::isPlaying() const
+auto Mnome::isPlaying() const -> bool
 {
     return bp.isRunning();
 }
@@ -131,7 +147,7 @@ bool Mnome::isPlaying() const
 // NOLINTNEXTLINE
 TEST_CASE("MnomeTest - ChangeSettingsDuringPlayback")
 {
-    const auto waitTime = std::chrono::milliseconds(10);
+    const auto   waitTime = std::chrono::milliseconds(10);
     stringstream stringStream;
 
     streambuf* cinbuf = cin.rdbuf();
