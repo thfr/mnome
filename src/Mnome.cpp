@@ -2,6 +2,7 @@
 #include "AudioSignal.hpp"
 #include "BeatPlayer.hpp"
 
+#include "Repl.hpp"
 #include "doctest.h"
 
 #include <cstddef>
@@ -54,14 +55,32 @@ Mnome::Mnome()
 
     // bind keywords to function callbacks
     ReplCommandList commands;
-    commands.emplace("exit", [this](string_view) -> void { stop(); });
-    commands.emplace("quit", [this](string_view) -> void { stop(); });
-    commands.emplace("start", [this](string_view) -> void { startPlayback(); });
-    commands.emplace("stop", [this](string_view) -> void { stopPlayback(); });
-    commands.emplace("bpm", [this](string_view args) -> void { setBPM(args); });
-    commands.emplace("pattern", [this](string_view args) -> void { setBeatPattern(args); });
+    commands.emplace(
+        "exit",
+        ReplCommand{.function = [this](string_view) -> void { stop(); }, .name = "exit", .help = "Exit program"});
+    commands.emplace(
+        "quit",
+        ReplCommand{.function = [this](string_view) -> void { stop(); }, .name = "quit", .help = "Exit program"});
+    commands.emplace("start", ReplCommand{.function = [this](string_view) -> void { startPlayback(); },
+                                          .name     = "start",
+                                          .help     = "Start playback"});
+    commands.emplace("stop", ReplCommand{.function = [this](string_view) -> void { stopPlayback(); },
+                                         .name     = "stop",
+                                         .help     = "Stop playback"});
+    commands.emplace("bpm", ReplCommand{.function = [this](string_view args) -> void { setBPM(args); },
+                                        .name     = "bpm",
+                                        .help     = "Set the bpm to an integer value"});
+    commands.emplace("pattern",
+                     ReplCommand{.function = [this](string_view args) -> void { setBeatPattern(args); },
+                                 .name     = "pattern",
+                                 .help = std::format("Command usage: pattern <pattern>\n"
+                                                     "  <pattern> must be in the form of `[{0}|{1}|{2}]*`\n"
+                                                     "  `{0}` = accentuated beat  `{1}` = normal beat  `{2}` = pause",
+                                                     BeatType::accent, BeatType::accent, BeatType::pause)});
     // make ENTER start and stop
-    commands.emplace("", [this](string_view) -> void { togglePlayback(); });
+    commands.emplace("", ReplCommand{.function = [this](string_view) -> void { togglePlayback(); },
+                                     .name     = "<ENTER KEY>",
+                                     .help     = "Shortcut for toggling playback"});
 
     repl.setCommands(commands);
     repl.start();

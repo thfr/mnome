@@ -17,7 +17,16 @@
 namespace mnome {
 
 using CommandFunction = std::function<void(std::string_view)>;
-using ReplCommandList = std::unordered_map<std::string_view, CommandFunction>;
+
+struct ReplCommand
+{
+    CommandFunction function;
+    std::string     name;
+    std::string     help;
+};
+
+using ReplCommandList = std::unordered_map<std::string_view, ReplCommand>;
+
 
 /// Read evaluate print loop
 class Repl
