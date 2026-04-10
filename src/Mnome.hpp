@@ -6,7 +6,7 @@
 #include "Repl.hpp"
 
 #include <mutex>
-#include <string>
+#include <string_view>
 
 namespace mnome {
 
@@ -16,7 +16,7 @@ extern const size_t PLAYBACK_RATE;
 class Mnome
 {
     BeatPlayer bp;
-    Repl repl;
+    Repl       repl;
     std::mutex cmdMtx;
 
 public:
@@ -28,9 +28,10 @@ public:
     void stopPlayback();
     void startPlayback();
     void togglePlayback();
-    void setBPM(std::optional<std::string> args);
-    void setBeatPattern(std::optional<std::string> args);
-    bool isPlaying() const;
+    void setBPM(std::string_view args);
+    void setBeatPattern(std::string_view args);
+
+    [[nodiscard]] auto isPlaying() const -> bool;
 
     /// Wait for the read evaluate loop to finish
     void waitForStop();

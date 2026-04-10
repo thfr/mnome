@@ -9,38 +9,45 @@
 #include <functional>
 #include <iostream>
 #include <memory>
-#include <optional>
-#include <string>
+#include <string_view>
 #include <thread>
 #include <unordered_map>
 
 
 namespace mnome {
 
-using CommandFunction = std::function<void(const std::optional<std::string>)>;
+using CommandFunction = std::function<void(std::string_view)>;
 using ReplCommandList = std::unordered_map<std::string_view, CommandFunction>;
 
 /// Read evaluate print loop
 class Repl
 {
-    ReplCommandList commands;
-    std::istream& inputStream;
-    std::ostream& outputStream;
+    ReplCommandList              commands;
+    std::istream&                inputStream{std::cin};
+    std::ostream&                outputStream{std::cout};
     std::unique_ptr<std::thread> myThread;
-    std::atomic_bool requestStop;
+    std::atomic_bool             requestStop{false};
 
 public:
     /// Ctor with empty command list
-    Repl();
+    Repl() = default;
 
     /// Ctor with command list
     Repl(ReplCommandList& cmds, std::istream& iStream = std::cin, std::ostream& oStream = std::cout);
 
     ~Repl();
 
+    // delete other contstructors
+    Repl(const Repl&)                          = delete;
+    Repl(Repl&&)                               = delete;
+    auto operator=(Repl&&) -> Repl&&           = delete;
+    auto operator=(const Repl&) -> const Repl& = delete;
+
     /// Set the commands that the REPL should recognize
-    /// \note Do not forget the exit/quit command
-    void setCommands(const ReplCommandList& cmds);
+    /// \note Only possible when Repl is not running
+    /// \param  cmds  List of commands
+    /// \return  True when successful
+    auto setCommands(const ReplCommandList& cmds) -> bool;
 
     /// Start the read evaluate print loop
     void start();
@@ -50,7 +57,7 @@ public:
     void stop();
 
     /// Indicates whether the thread is running
-    bool isRunning() const;
+    auto isRunning() const -> bool;
 
     /// Make sure the thread has stopped
     /// \note blocks until thread is finished
@@ -62,7 +69,7 @@ private:
 
     /// Print all avaiable commands or the specific command help
     /// \par arg Command for which to display help message
-    void printHelp(std::optional<std::string> arg);
+    void printHelp(std::string_view arg = {});
 };
 
 

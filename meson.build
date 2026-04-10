@@ -1,6 +1,6 @@
 project('mnome', 'cpp',
   version : '0.1',
-  default_options : ['warning_level=3', 'werror=true', 'cpp_std=c++20'])
+  default_options : ['warning_level=3', 'werror=true', 'cpp_std=c++23'])
 
 miniaudio = subproject('miniaudio')
 miniaudio_dep = miniaudio.get_variable('miniaudio_dep')

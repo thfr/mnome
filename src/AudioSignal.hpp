@@ -1,6 +1,5 @@
 #include <cstddef>
 #include <cstdint>
-#include <iterator>
 #include <vector>
 
 #ifndef MNOME_AUDIOSIGNAL_HPP
@@ -14,15 +13,15 @@ using AudioDataType = std::vector<SampleType>;
 
 struct AudioSignalConfiguration
 {
-    double sampleRate;      //< [Hz]
-    std::uint8_t channels;  //< number of interleaved channels
+    double       sampleRate;  //< [Hz]
+    std::uint8_t channels;    //< number of interleaved channels
 };
 
 
 struct ToneConfiguration
 {
-    double length;           //< [s]
-    double frequency;        //< [Hz]
+    double       length;     //< [s]
+    double       frequency;  //< [Hz]
     std::uint8_t overtones;  //< number overtones
 };
 
@@ -31,7 +30,7 @@ class AudioSignal
 {
 private:
     AudioSignalConfiguration config;
-    AudioDataType data;
+    AudioDataType            data;
 
 public:
     AudioSignal() = delete;
@@ -45,28 +44,28 @@ public:
     void highPass20Hz();
     void fadeInOut(size_t fadeInSamples, size_t fadeOutSamples);
 
-    const AudioDataType& getAudioData() const;
+    [[nodiscard]] auto getAudioData() const -> const AudioDataType&;
 
-    size_t numberSamples() const;
-    double length() const;
+    [[nodiscard]] auto numberSamples() const -> size_t;
+    [[nodiscard]] auto length() const -> double;
 
     void resizeSamples(size_t numberSamples, SampleType value = 0);
 
-    bool mixingPossibile(const AudioSignal& other) const;
+    [[nodiscard]] auto mixingPossibile(const AudioSignal& other) const -> bool;
 
-    AudioSignal& operator+=(const AudioSignal& summand);
-    AudioSignal& operator-=(const AudioSignal& summand);
+    auto operator+=(const AudioSignal& summand) -> AudioSignal&;
+    auto operator-=(const AudioSignal& summand) -> AudioSignal&;
 };
 
-AudioSignal operator+(AudioSignal summand1, const AudioSignal& summand);
-AudioSignal operator-(AudioSignal minuend, const AudioSignal& subtrahend);
+auto operator+(AudioSignal summand1, const AudioSignal& summand) -> AudioSignal;
+auto operator-(AudioSignal minuend, const AudioSignal& subtrahend) -> AudioSignal;
 
 
 /// Generate specific tone as an AudioSignal
-AudioSignal generateTone(const AudioSignalConfiguration& audioConfig, const ToneConfiguration& toneConfig);
+auto generateTone(const AudioSignalConfiguration& audioConfig, const ToneConfiguration& toneConfig) -> AudioSignal;
 
 /// Calculate frequency certain half steps away from a base frequency
-double halfToneOffset(double baseFreq, size_t offset);
+auto halfToneOffset(double baseFreq, size_t offset) -> double;
 
 };  // namespace mnome
 

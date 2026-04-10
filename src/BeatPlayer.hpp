@@ -7,11 +7,14 @@
 
 #include "AudioSignal.hpp"
 
+#include <format>
 #include <memory>
 #include <miniaudio.h>
 
 #include <atomic>
 #include <mutex>
+#include <string_view>
+#include <utility>
 #include <vector>
 
 
@@ -37,13 +40,13 @@ private:
     BeatPatternType pattern{BeatType::beat};
 
 public:
-    explicit MetronomeBeats(const std::string& strPattern);
-    explicit MetronomeBeats(const BeatPatternType& otherPattern);
+    explicit MetronomeBeats(std::string_view strPattern);
+    explicit MetronomeBeats(BeatPatternType otherPattern);
 
-    void fromString(const std::string& strPattern);
-    std::string toString() const;
+    void               fromString(std::string_view strPattern);
+    [[nodiscard]] auto toString() const -> std::string;
 
-    const BeatPatternType& getBeatPattern() const;
+    [[nodiscard]] auto getBeatPattern() const -> const BeatPatternType&;
 };
 
 
@@ -52,29 +55,34 @@ class BeatPlayer
 {
 private:
     // data members
-    size_t beatRate;
+    size_t                       beatRate{DEFAULT_BPM};
     std::unique_ptr<AudioSignal> beat;
     std::unique_ptr<AudioSignal> accentuatedBeat;
-    AudioDataType playBackBuffer;
-    MetronomeBeats beatPattern{"!+++"};
+    AudioDataType                playBackBuffer;
+    MetronomeBeats               beatPattern{"!+++"};
 
     // synchronization
     std::recursive_mutex setterMutex;
-    std::atomic_bool requestStop{false};
-    std::atomic_bool running{false};
+    std::atomic_bool     requestStop{false};
+    std::atomic_bool     running{false};
 
     // miniaudio
-    ma_context context;
-    ma_device_config deviceConfig;
-    ma_device device;
-    ma_audio_buffer_config buf_config;
-    ma_audio_buffer buf;
+    ma_context             context{};
+    ma_device_config       deviceConfig{};
+    ma_device              device{};
+    ma_audio_buffer_config buf_config{};
+    ma_audio_buffer        buf{};
 
 
 public:
-    BeatPlayer();
-
+    BeatPlayer() = default;
     ~BeatPlayer();
+
+    // Delete other constructors
+    BeatPlayer(const BeatPlayer&)                    = delete;
+    BeatPlayer(BeatPlayer&&)                         = delete;
+    auto operator=(const BeatPlayer&) -> BeatPlayer& = delete;
+    auto operator=(BeatPlayer&&) -> BeatPlayer&&     = delete;
 
     /// Set the sound of the beat that is played back
     /// \param  newBeat  samples the represent the beat
@@ -98,7 +106,7 @@ public:
     void setBPM(size_t bpm);
 
     /// Get the current bpm setting
-    size_t getBPM() const;
+    [[nodiscard]] auto getBPM() const -> size_t;
 
     /// Change the beat that is played back
     /// \param  beatData  The beat that is played back
@@ -110,7 +118,7 @@ public:
     void setDataAndBPM(const AudioSignal& beatData, size_t bpm);
 
     /// Indicates whether the audio playback is running
-    bool isRunning() const;
+    [[nodiscard]] auto isRunning() const -> bool;
 
 private:
     /// Start the audio playback
@@ -122,6 +130,32 @@ private:
 
 
 }  // namespace mnome
+
+
+// use BeatType in std::format
+template <>
+struct std::formatter<mnome::BeatType, char>
+{
+    template <class ParseContext>
+    constexpr auto parse(ParseContext& ctx) -> ParseContext::iterator
+    {
+        auto iter = ctx.begin();
+        if (iter == ctx.end()) {
+            return iter;
+        }
+        if (iter != ctx.end() && *iter != '}') {
+            throw std::format_error("Invalid format args for mnome::BeatType.");
+        }
+        return iter;
+    }
+
+    template <class FmtContext>
+    auto format(mnome::BeatType beatType, FmtContext& ctx) const -> FmtContext::iterator
+    {
+        *ctx.out() = std::to_underlying(beatType);
+        return ctx.out();
+    }
+};
 
 
 #endif  //  MNOME_BEATPLAYER_H

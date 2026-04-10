@@ -1,8 +1,8 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.10)
 project(Mnome)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 
 if(NOT MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wshadow -Wall -Wextra -pedantic")
@@ -14,9 +14,8 @@ set(CMAKE_CXX_CLANG_TIDY clang-tidy -checks=-*,readability-*)
 
 include(cmake/CPM.cmake)
 include(cmake/cli.cmake)
+include(cmake/doctest.cmake)
 include(cmake/miniaudio.cmake)
-
-CPMAddPackage("gh:onqtam/doctest@2.4.11")
 
 include_directories(${doctest_SOURCE_DIR}/doctest)
 

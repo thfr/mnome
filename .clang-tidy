@@ -1,7 +1,8 @@
 ---
-Checks:          'clang-diagnostic-*,clang-analyzer-*,readability-*'
-WarningsAsErrors: ''
-HeaderFilterRegex: ''
-FormatStyle:     none
+Checks: "bugprone-*,concurrency-*,clang-diagnostic-*,clang-analyzer-*,cppcoreguidelines-*,modernize-*,performance-*,readability-*"
+WarningsAsErrors: ""
+HeaderFilterRegex: ""
+ExcludeHeaderFilterRegex: '.*/[miniaudio\.h|doctest\.h'
+FormatStyle: none
 ...
 
