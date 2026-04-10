@@ -35,7 +35,6 @@ static inline auto rtrim(std::string_view& input) -> std::string_view&
     return input;
 }
 
-
 Repl::Repl(ReplCommandList& cmds, std::istream& iStream, std::ostream& oStream)
     : commands{cmds}, inputStream{iStream}, outputStream{oStream}, myThread{nullptr}, requestStop{false}
 {
@@ -126,7 +125,7 @@ void Repl::run()
 
         // execute command with parameters
         try {
-            possibleCommand->second(args);
+            possibleCommand->second.function(args);
         }
         catch (const std::exception& e) {
             outputStream << std::format("Could not get that, please try again\n");
@@ -145,7 +144,7 @@ void Repl::printHelp(std::string_view arg)
             outputStream << std::format("\"{}\" is not a valid command to show help for", arg);
         }
         else {
-            outputStream << std::format("\"{}\" is valid command, displaying help message is not yet supported", arg);
+            outputStream << possibleCommand->second.help;
         }
     }
     else {
@@ -153,9 +152,9 @@ void Repl::printHelp(std::string_view arg)
         if (!commands.empty()) {
             outputStream << "Known commands: ";
             auto commandIter = begin(commands);
-            outputStream << std::format("{}", commandIter->first);
+            outputStream << std::format("{}", commandIter->second.name);
             while (++commandIter != end(commands)) {
-                outputStream << std::format(", {}", commandIter->first);
+                outputStream << std::format(", {}", commandIter->second.name);
             }
         }
         else {
